@@ -75,7 +75,9 @@ static uint32 minXlogTli = 0;
 static XLogSegNo minXlogSegNo = 0;
 static int	WalSegSz;
 static int	set_wal_segsize;
+static uint64 set_sysid = 0;
 
+static uint64 GenerateSystemIdentifier(void);
 static void CheckDataVersion(void);
 static bool read_controlfile(void);
 static void GuessControlValues(void);
@@ -119,7 +121,7 @@ main(int argc, char *argv[])
 	int			fd;
 
 	pg_logging_init(argv[0]);
-	set_pglocale_pgservice(argv[0], PG_TEXTDOMAIN("pg_resetwal"));
+	set_pglocale_pgservice(argv[0], PG_TEXTDOMAIN("bdr_resetxlog"));
 	progname = get_progname(argv[0]);
 
 	if (argc > 1)
@@ -131,13 +133,13 @@ main(int argc, char *argv[])
 		}
 		if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-V") == 0)
 		{
-			puts("pg_resetwal (PostgreSQL) " PG_VERSION);
+			puts("bdr_resetxlog (PostgreSQL) " PG_VERSION);
 			exit(0);
 		}
 	}
 
 
-	while ((c = getopt_long(argc, argv, "c:D:e:fl:m:no:O:u:x:", long_options, NULL)) != -1)
+	while ((c = getopt_long(argc, argv, "c:D:e:fl:m:no:O:u:x:s::", long_options, NULL)) != -1)
 	{
 		switch (c)
 		{
@@ -298,6 +300,22 @@ main(int argc, char *argv[])
 					pg_fatal("argument of --wal-segsize must be a power of 2 between 1 and 1024");
 				break;
 
+			case 's':
+				if (optarg)
+				{
+					if (sscanf(optarg, UINT64_FORMAT, &set_sysid) != 1)
+					{
+						pg_log_error("invalid argument for option %s", "-s");
+						pg_log_error_hint("Try \"%s --help\" for more information.", progname);
+						exit(1);
+					}
+				}
+				else
+				{
+					set_sysid = GenerateSystemIdentifier();
+				}
+				break;
+
 			default:
 				/* getopt_long already emitted a complaint */
 				pg_log_error_hint("Try \"%s --help\" for more information.", progname);
@@ -455,6 +473,9 @@ main(int argc, char *argv[])
 	if (minXlogSegNo > newXlogSegNo)
 		newXlogSegNo = minXlogSegNo;
 
+	if (set_sysid != 0)
+		ControlFile.system_identifier = set_sysid;
+
 	/*
 	 * If we had to guess anything, and -f was not given, just print the
 	 * guessed values and exit.  Also print if -n is given.
@@ -543,6 +564,26 @@ CheckDataVersion(void)
 
 
 /*
+ * Create a new unique installation identifier.
+ *
+ * See notes in xlog.c about the algorithm.
+ */
+static uint64
+GenerateSystemIdentifier(void)
+{
+	uint64			sysidentifier;
+	struct timeval	tv;
+
+	gettimeofday(&tv, NULL);
+	sysidentifier = ((uint64) tv.tv_sec) << 32;
+	sysidentifier |= ((uint64) tv.tv_usec) << 12;
+	sysidentifier |= getpid() & 0xFFF;
+
+	return sysidentifier;
+}
+
+
+/*
  * Try to read the existing pg_control file.
  *
  * This routine is also responsible for updating old pg_control versions
@@ -626,7 +667,6 @@ static void
 GuessControlValues(void)
 {
 	uint64		sysidentifier;
-	struct timeval tv;
 
 	/*
 	 * Set up a completely default set of pg_control values.
@@ -641,10 +681,7 @@ GuessControlValues(void)
 	 * Create a new unique installation identifier, since we can no longer use
 	 * any old XLOG records.  See notes in xlog.c about the algorithm.
 	 */
-	gettimeofday(&tv, NULL);
-	sysidentifier = ((uint64) tv.tv_sec) << 32;
-	sysidentifier |= ((uint64) tv.tv_usec) << 12;
-	sysidentifier |= getpid() & 0xFFF;
+	sysidentifier = GenerateSystemIdentifier();
 
 	ControlFile.system_identifier = sysidentifier;
 
@@ -1147,6 +1184,7 @@ usage(void)
 	printf(_("  -O, --multixact-offset=OFFSET    set next multitransaction offset\n"));
 	printf(_("  -u, --oldest-transaction-id=XID  set oldest transaction ID\n"));
 	printf(_("  -V, --version                    output version information, then exit\n"));
+	printf(_("  -s [SYSID]                     set system identifier (or generate one)\n"));
 	printf(_("  -x, --next-transaction-id=XID    set next transaction ID\n"));
 	printf(_("      --wal-segsize=SIZE           size of WAL segments, in megabytes\n"));
 	printf(_("  -?, --help                       show this help, then exit\n"));
