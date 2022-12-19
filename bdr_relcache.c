@@ -28,7 +28,11 @@
 #include "utils/catcache.h"
 #include "utils/fmgroids.h"
 #include "utils/inval.h"
+#if PG_VERSION_NUM < 130000
 #include "utils/jsonapi.h"
+#else
+#include "common/jsonapi.h"
+#endif
 #include "utils/json.h"
 #include "utils/jsonb.h"
 #include "utils/rel.h"
