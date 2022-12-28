@@ -263,7 +263,7 @@ retry:
 		 * from a prior loop is cleared first.
 		 */
 		/* FIXME: Improve TupleSlot to not require copying the whole tuple */
-		ExecStoreTuple(scantuple, slot, InvalidBuffer, false);
+		ExecStoreHeapTuple(scantuple, slot, false);
 		ExecMaterializeSlot(slot);
 
 		xwait = TransactionIdIsValid(snap.xmin) ?  snap.xmin : snap.xmax;

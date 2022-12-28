@@ -26,6 +26,7 @@
 #include "access/commit_ts.h"
 #include "access/htup_details.h"
 #include "access/relscan.h"
+#include "access/skey.h"
 #include "access/xact.h"
 
 #include "catalog/catversion.h"
@@ -644,7 +645,7 @@ process_remote_insert(StringInfo s)
 		HeapTuple tup;
 		tup = heap_form_tuple(RelationGetDescr(rel->rel),
 							  new_tuple.values, new_tuple.isnull);
-		ExecStoreTuple(tup, newslot, InvalidBuffer, true);
+		ExecStoreHeapTuple(tup, newslot, true);
 	}
 
 	if (rel->rel->rd_rel->relkind != RELKIND_RELATION)
@@ -776,7 +777,7 @@ process_remote_insert(StringInfo s)
 #ifdef VERBOSE_INSERT
 				log_tuple("USER tuple:%s", RelationGetDescr(rel->rel), user_tuple);
 #endif
-				ExecStoreTuple(user_tuple, newslot, InvalidBuffer, true);
+				ExecStoreHeapTuple(user_tuple, newslot, true);
 			}
 
 			simple_heap_update(rel->rel,
@@ -991,7 +992,7 @@ process_remote_update(StringInfo s)
 										 new_tuple.isnull,
 										 new_tuple.changed);
 
-		ExecStoreTuple(remote_tuple, newslot, InvalidBuffer, true);
+		ExecStoreHeapTuple(remote_tuple, newslot, true);
 
 #ifdef VERBOSE_UPDATE
 		{
@@ -1043,7 +1044,7 @@ process_remote_update(StringInfo s)
 #ifdef VERBOSE_UPDATE
 				log_tuple("USER tuple:%s", RelationGetDescr(rel->rel), user_tuple);
 #endif
-				ExecStoreTuple(user_tuple, newslot, InvalidBuffer, true);
+				ExecStoreHeapTuple(user_tuple, newslot, true);
 			}
 
 			simple_heap_update(rel->rel, &oldslot->tts_tuple->t_self, newslot->tts_tuple);
@@ -1074,7 +1075,7 @@ process_remote_update(StringInfo s)
 									   new_tuple.values,
 									   new_tuple.isnull);
 
-		ExecStoreTuple(remote_tuple, newslot, InvalidBuffer, true);
+		ExecStoreHeapTuple(remote_tuple, newslot, true);
 
 		user_tuple = bdr_conflict_handlers_resolve(rel, NULL,
 												   remote_tuple, "UPDATE",
@@ -1106,7 +1107,7 @@ process_remote_update(StringInfo s)
 #ifdef VERBOSE_UPDATE
 			log_tuple("USER tuple:%s", RelationGetDescr(rel->rel), user_tuple);
 #endif
-			ExecStoreTuple(user_tuple, newslot, InvalidBuffer, true);
+			ExecStoreHeapTuple(user_tuple, newslot, true);
 
 			simple_heap_insert(rel->rel, newslot->tts_tuple);
 			UserTableUpdateOpenIndexes(estate, newslot);
@@ -1215,7 +1216,7 @@ process_remote_delete(StringInfo s)
 		HeapTuple tup;
 		tup = heap_form_tuple(RelationGetDescr(rel->rel),
 							  oldtup.values, oldtup.isnull);
-		ExecStoreTuple(tup, oldslot, InvalidBuffer, true);
+		ExecStoreHeapTuple(tup, oldslot, true);
 	}
 	log_tuple("DELETE old-key:%s", RelationGetDescr(rel->rel), oldslot->tts_tuple);
 #endif
@@ -1258,7 +1259,7 @@ process_remote_delete(StringInfo s)
 		/* Since the local tuple is missing, fill slot from the received data. */
 		remote_tuple = heap_form_tuple(RelationGetDescr(rel->rel),
 									   oldtup.values, oldtup.isnull);
-		ExecStoreTuple(remote_tuple, oldslot, InvalidBuffer, true);
+		ExecStoreHeapTuple(remote_tuple, oldslot, true);
 
 		/*
 		 * Trigger user specified conflict handler so that application may

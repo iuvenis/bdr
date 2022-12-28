@@ -563,7 +563,7 @@ bdr_conflict_log_table(BdrApplyConflict *conflict)
 	ExecSetSlotDescriptor(log_slot, RelationGetDescr(log_rel));
 	/* Construct the tuple and insert it */
 	log_tup = heap_form_tuple(RelationGetDescr(log_rel), values, nulls);
-	ExecStoreTuple(log_tup, log_slot, InvalidBuffer, true);
+	ExecStoreHeapTuple(log_tup, log_slot, true);
 	simple_heap_insert(log_rel, log_slot->tts_tuple);
 	/* Then do any index maintanence required */
 	UserTableUpdateIndexes(log_estate, log_slot);
