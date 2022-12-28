@@ -616,7 +616,7 @@ bdr_sequencer_vote(void)
 
 	argtypes[1] = OIDOID;
 	nulls[1] = false;
-	values[1] = ObjectIdGetDatum(ThisTimeLineID);
+	values[1] = ObjectIdGetDatum(GetWALInsertionTimeLine());
 
 	argtypes[2] = OIDOID;
 	values[2] = ObjectIdGetDatum(MyDatabaseId);
@@ -695,7 +695,7 @@ bdr_sequencer_start_elections(void)
 
 	argtypes[1] = OIDOID;
 	nulls[1] = false;
-	values[1] = ObjectIdGetDatum(ThisTimeLineID);
+	values[1] = ObjectIdGetDatum(GetWALInsertionTimeLine());
 
 	argtypes[2] = OIDOID;
 	values[2] = ObjectIdGetDatum(MyDatabaseId);
@@ -759,7 +759,7 @@ bdr_sequencer_tally(void)
 
 	argtypes[1] = OIDOID;
 	nulls[1] = false;
-	values[1] = ObjectIdGetDatum(ThisTimeLineID);
+	values[1] = ObjectIdGetDatum(GetWALInsertionTimeLine());
 
 	argtypes[2] = OIDOID;
 	values[2] = ObjectIdGetDatum(MyDatabaseId);
@@ -843,7 +843,7 @@ bdr_sequencer_fill_chunk(Oid seqoid, char *seqschema, char *seqname,
 
 	argtypes[1] = OIDOID;
 	nulls[1] = false;
-	values[1] = ObjectIdGetDatum(ThisTimeLineID);
+	values[1] = ObjectIdGetDatum(GetWALInsertionTimeLine());
 
 	argtypes[2] = OIDOID;
 	values[2] = ObjectIdGetDatum(MyDatabaseId);

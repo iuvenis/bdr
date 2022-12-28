@@ -925,7 +925,7 @@ bdr_make_my_nodeid(BDRNodeId * const ni)
 {
 	Assert(ni != NULL);
 	ni->sysid = GetSystemIdentifier();
-	ni->timeline = ThisTimeLineID;
+	ni->timeline = GetWALInsertionTimeLine();
 	ni->dboid = MyDatabaseId;
 
 	/*

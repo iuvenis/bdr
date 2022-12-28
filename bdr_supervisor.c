@@ -391,7 +391,6 @@ bdr_supervisor_worker_main(Datum main_arg)
 	}
 
 	BackgroundWorkerInitializeConnection(BDR_SUPERVISOR_DBNAME, NULL, 0);
-	Assert(ThisTimeLineID > 0);
 
 	MyProcPort->database_name = BDR_SUPERVISOR_DBNAME;
 

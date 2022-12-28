@@ -447,7 +447,6 @@ bdr_bgworker_init(uint32 worker_arg, BdrWorkerType worker_type)
 
 	/* Connect to our database */
 	BackgroundWorkerInitializeConnection(dbname, NULL, 0);
-	Assert(ThisTimeLineID > 0);
 
 	MyProcPort->database_name = MemoryContextStrdup(TopMemoryContext, dbname);
 

@@ -11,6 +11,7 @@
 #define BDR_H
 
 #include "access/xlogdefs.h"
+#include "access/xlog.h"
 #include "postmaster/bgworker.h"
 #include "replication/logical.h"
 #include "utils/resowner.h"
@@ -48,7 +49,7 @@
 #define BDR_NODEID_FORMAT_WITHNAME "%s ("UINT64_FORMAT",%u,%u,%s)"
 
 #define BDR_LOCALID_FORMAT_ARGS \
-	GetSystemIdentifier(), ThisTimeLineID, MyDatabaseId, EMPTY_REPLICATION_NAME
+	GetSystemIdentifier(), GetWALInsertionTimeLine(), MyDatabaseId, EMPTY_REPLICATION_NAME
 
 /*
  * For use with BDR_NODEID_FORMAT_WITHNAME, print our node id tuple and name.

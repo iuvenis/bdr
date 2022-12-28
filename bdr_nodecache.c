@@ -307,8 +307,7 @@ const char * bdr_nodeid_name(const BDRNodeId * const node, bool missing_ok)
  * not invalidating it on change isn't a big deal; about all it can do
  * is affect synchronous_standby_names .
  *
- * Must be called after background worker setup so ThisTimeLineID
- * is initialized, while there's an open txn.
+ * Must be called after background worker setup.
  *
  * TODO: If we made the nodecache eager, so it reloaded fully on
  * invalidations, we could get rid of this hack.
