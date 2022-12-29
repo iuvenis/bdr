@@ -635,8 +635,8 @@ process_remote_insert(StringInfo s)
 			 action);
 
 	estate = bdr_create_rel_estate(rel->rel);
-	newslot = ExecInitExtraTupleSlot(estate, NULL);
-	oldslot = ExecInitExtraTupleSlot(estate, NULL);
+	newslot = ExecInitExtraTupleSlot(estate, NULL, &TTSOpsHeapTuple);
+	oldslot = ExecInitExtraTupleSlot(estate, NULL, &TTSOpsHeapTuple);
 	ExecSetSlotDescriptor(newslot, RelationGetDescr(rel->rel));
 	ExecSetSlotDescriptor(oldslot, RelationGetDescr(rel->rel));
 
