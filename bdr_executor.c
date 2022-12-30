@@ -59,24 +59,14 @@ static bool bdr_always_allow_writes = false;
 PGDLLEXPORT Datum bdr_node_set_read_only(PG_FUNCTION_ARGS);
 PG_FUNCTION_INFO_V1(bdr_node_set_read_only);
 
-EState *
-bdr_create_rel_estate(Relation rel)
+ResultRelInfo *
+bdr_create_result_rel_info(Relation rel)
 {
-	EState	   *estate;
-	ResultRelInfo *resultRelInfo;
-
-	estate = CreateExecutorState();
-
-	resultRelInfo = makeNode(ResultRelInfo);
+	ResultRelInfo *resultRelInfo = makeNode(ResultRelInfo);
 	resultRelInfo->ri_RangeTableIndex = 1;		/* dummy */
 	resultRelInfo->ri_RelationDesc = rel;
 	resultRelInfo->ri_TrigInstrument = NULL;
-
-	estate->es_result_relations = resultRelInfo;
-	estate->es_num_result_relations = 1;
-	estate->es_result_relation_info = resultRelInfo;
-
-	return estate;
+        return resultRelInfo;
 }
 
 void

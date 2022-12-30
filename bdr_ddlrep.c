@@ -67,7 +67,7 @@ bdr_queue_ddl_command(const char *command_tag, const char *command, const char *
 	rv = makeRangeVar("bdr", "bdr_queued_commands", -1);
 	queuedcmds = heap_openrv(rv, RowExclusiveLock);
 	slot = MakeSingleTupleTableSlot(RelationGetDescr(queuedcmds));
-	estate = bdr_create_rel_estate(queuedcmds);
+	estate = CreateExecutorState();
 	ExecOpenIndices(estate->es_result_relation_info, false);
 
 	/* lsn, queued_at, perpetrator, command_tag, command */
