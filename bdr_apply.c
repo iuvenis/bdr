@@ -660,12 +660,11 @@ process_remote_insert(StringInfo s)
 	/*
 	 * Search for conflicting tuples.
 	 */
-	ExecOpenIndices(estate->es_result_relation_info, false);
-	relinfo = estate->es_result_relation_info;
+	ExecOpenIndices(relinfo, false);
 	index_keys = palloc0(relinfo->ri_NumIndices * sizeof(ScanKeyData*));
 	conflicts = palloc0(relinfo->ri_NumIndices * sizeof(ItemPointerData));
 
-	build_index_scan_keys(estate, index_keys, &new_tuple);
+	build_index_scan_keys(relinfo, index_keys, &new_tuple);
 
 	/* do a SnapshotDirty search for conflicting tuples */
 	for (i = 0; i < relinfo->ri_NumIndices; i++)
@@ -805,7 +804,7 @@ process_remote_insert(StringInfo s)
 
 	PopActiveSnapshot();
 
-	ExecCloseIndices(estate->es_result_relation_info);
+	ExecCloseIndices(relinfo);
 
 	check_bdr_wakeups(rel);
 

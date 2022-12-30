@@ -118,12 +118,9 @@ UserTableUpdateOpenIndexes(EState *estate, TupleTableSlot *slot)
 }
 
 void
-build_index_scan_keys(EState *estate, ScanKey *scan_keys, BDRTupleData *tup)
+build_index_scan_keys(ResultRelInfo *relinfo, ScanKey *scan_keys, BDRTupleData *tup)
 {
-	ResultRelInfo *relinfo;
 	int i;
-
-	relinfo = estate->es_result_relation_info;
 
 	/* build scankeys for each index */
 	for (i = 0; i < relinfo->ri_NumIndices; i++)

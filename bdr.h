@@ -12,6 +12,7 @@
 
 #include "access/xlogdefs.h"
 #include "access/xlog.h"
+#include "nodes/execnodes.h"
 #include "postmaster/bgworker.h"
 #include "replication/logical.h"
 #include "utils/resowner.h"
@@ -473,7 +474,7 @@ extern void UserTableUpdateIndexes(struct EState *estate,
 								   struct TupleTableSlot *slot);
 extern void UserTableUpdateOpenIndexes(struct EState *estate,
 									   struct TupleTableSlot *slot);
-extern void build_index_scan_keys(struct EState *estate,
+extern void build_index_scan_keys(ResultRelInfo *relInfo,
 								  struct ScanKeyData **scan_keys,
 								  BDRTupleData *tup);
 extern bool build_index_scan_key(struct ScanKeyData *skey, Relation rel,
