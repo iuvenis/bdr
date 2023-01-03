@@ -1152,6 +1152,7 @@ process_remote_delete(StringInfo s)
 	EState	   *estate;
 	BDRTupleData oldtup;
 	TupleTableSlot *oldslot;
+        HeapTupleTableSlot *oldhslot;
 	Oid			idxoid;
 	BDRRelation	*rel;
 	Relation	idxrel;
@@ -1199,7 +1200,7 @@ process_remote_delete(StringInfo s)
 	}
 
 	estate = CreateExecutorState();
-	oldslot = ExecInitExtraTupleSlot(estate, NULL);
+	oldslot = ExecInitExtraTupleSlot(estate, NULL, &TTSOpsHeapTuple);
 	ExecSetSlotDescriptor(oldslot, RelationGetDescr(rel->rel));
 
 	read_tuple_parts(s, rel, &oldtup);
@@ -1241,7 +1242,8 @@ process_remote_delete(StringInfo s)
 
 	if (found_old)
 	{
-		simple_heap_delete(rel->rel, &oldslot->tts_tuple->t_self);
+		oldhslot = (HeapTupleTableSlot *) oldslot;
+		simple_heap_delete(rel->rel, &oldhslot->tuple->t_self);
 		bdr_count_delete();
 	}
 	else
