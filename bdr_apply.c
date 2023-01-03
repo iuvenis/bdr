@@ -1590,7 +1590,7 @@ bdr_execute_ddl_command(char *cmdstr, char *perpetrator, char *search_path,
 			command, cmdstr, NULL, 0, NULL);
 
 		plantree_list = pg_plan_queries(
-			querytree_list, 0, NULL);
+					querytree_list, cmdstr, 0, NULL);
 
 		PopActiveSnapshot();
 
