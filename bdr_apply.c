@@ -1732,7 +1732,7 @@ format_drop_objectlist(StringInfo si, ObjectAddresses *addrs)
 	{
 		ObjectAddress *obj = addrs->refs + i;
 
-		appendStringInfo(si, "\n  * %s", getObjectDescription(obj));
+		appendStringInfo(si, "\n  * %s", getObjectDescription(obj, false));
 	}
 }
 

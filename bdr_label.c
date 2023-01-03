@@ -69,7 +69,7 @@ bdr_object_relabel(const ObjectAddress *object, const char *seclabel)
 			break;
 		default:
 			elog(ERROR, "unsupported object type: %s",
-				 getObjectDescription(object));
+				getObjectDescription(object, false));
 			break;
 	}
 }
