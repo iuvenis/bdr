@@ -2336,7 +2336,7 @@ static bool
 bdr_get_flush_position(XLogRecPtr *write, XLogRecPtr *flush)
 {
 	dlist_mutable_iter iter;
-	XLogRecPtr	local_flush = GetFlushRecPtr();
+	XLogRecPtr	local_flush = GetFlushRecPtr(NULL);
 
 	*write = InvalidXLogRecPtr;
 	*flush = InvalidXLogRecPtr;
