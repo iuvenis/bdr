@@ -1586,7 +1586,7 @@ bdr_execute_ddl_command(char *cmdstr, char *perpetrator, char *search_path,
 
 		commandTag = CreateCommandTag(command->stmt);
 
-		querytree_list = pg_analyze_and_rewrite(
+		querytree_list = pg_analyze_and_rewrite_fixedparams(
 			command, cmdstr, NULL, 0, NULL);
 
 		plantree_list = pg_plan_queries(
