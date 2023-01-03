@@ -23,7 +23,9 @@
 #include "miscadmin.h"
 #include "pgstat.h"
 
+#include "access/genam.h"
 #include "access/commit_ts.h"
+#include "access/heapam.h"
 #include "access/htup_details.h"
 #include "access/relscan.h"
 #include "access/skey.h"
@@ -885,6 +887,8 @@ process_remote_update(StringInfo s)
 	EState	   *estate;
 	TupleTableSlot *newslot;
 	TupleTableSlot *oldslot;
+        HeapTupleTableSlot *newhslot;
+        HeapTupleTableSlot *oldhslot;
 	bool		pkey_sent;
 	bool		found_tuple;
 	BDRTupleData old_tuple;
@@ -930,9 +934,9 @@ process_remote_update(StringInfo s)
 			 action);
 
 	estate = CreateExecutorState();
-	oldslot = ExecInitExtraTupleSlot(estate, NULL);
+	oldslot = ExecInitExtraTupleSlot(estate, NULL, &TTSOpsHeapTuple);
 	ExecSetSlotDescriptor(oldslot, RelationGetDescr(rel->rel));
-	newslot = ExecInitExtraTupleSlot(estate, NULL);
+	newslot = ExecInitExtraTupleSlot(estate, NULL, &TTSOpsHeapTuple);
 	ExecSetSlotDescriptor(newslot, RelationGetDescr(rel->rel));
 
 	if (action == 'K')
@@ -982,6 +986,8 @@ process_remote_update(StringInfo s)
 	found_tuple = find_pkey_tuple(skey, rel, idxrel, oldslot, true,
 						pkey_sent ? LockTupleExclusive : LockTupleNoKeyExclusive);
 
+        oldhslot = (HeapTupleTableSlot *) oldslot;
+        newhslot = (HeapTupleTableSlot *) newslot;
 	if (found_tuple)
 	{
 		TimestampTz local_ts;
@@ -991,7 +997,7 @@ process_remote_update(StringInfo s)
 		BdrApplyConflict *apply_conflict = NULL; /* Mute compiler */
 		BdrConflictResolution resolution;
 
-		remote_tuple = heap_modify_tuple(oldslot->tts_tuple,
+		remote_tuple = heap_modify_tuple(oldhslot->tuple,
 										 RelationGetDescr(rel->rel),
 										 new_tuple.values,
 										 new_tuple.isnull,
@@ -1011,7 +1017,7 @@ process_remote_update(StringInfo s)
 		}
 #endif
 
-		get_local_tuple_origin(oldslot->tts_tuple, &local_ts, &local_node_id);
+		get_local_tuple_origin(oldhslot->tuple, &local_ts, &local_node_id);
 
 		/*
 		 * Use conflict triggers and/or last-update-wins to decide which tuple
@@ -1019,7 +1025,7 @@ process_remote_update(StringInfo s)
 		 */
 		check_apply_update(BdrConflictType_UpdateUpdate,
 						   local_node_id, local_ts, rel,
-						   oldslot->tts_tuple, newslot->tts_tuple,
+						   oldhslot->tuple, newhslot->tuple,
 						   &user_tuple, &apply_update,
 						   &log_update, &resolution);
 
@@ -1052,7 +1058,7 @@ process_remote_update(StringInfo s)
 				ExecStoreHeapTuple(user_tuple, newslot, true);
 			}
 
-			simple_heap_update(rel->rel, &oldslot->tts_tuple->t_self, newslot->tts_tuple);
+			simple_heap_update(rel->rel, &oldhslot->tuple->t_self, newhslot->tuple);
 			UserTableUpdateIndexes(estate, newslot);
 			bdr_count_update();
 		}
@@ -1114,7 +1120,7 @@ process_remote_update(StringInfo s)
 #endif
 			ExecStoreHeapTuple(user_tuple, newslot, true);
 
-			simple_heap_insert(rel->rel, newslot->tts_tuple);
+			simple_heap_insert(rel->rel, newhslot->tuple);
 			UserTableUpdateOpenIndexes(estate, newslot);
 		}
 
