@@ -19,6 +19,7 @@
 #include "bdr.h"
 #include "miscadmin.h"
 
+#include "access/table.h"
 #include "access/xact.h"
 
 #include "catalog/pg_type.h"
@@ -154,7 +155,7 @@ bdr_nodes_get_local_info(const BDRNodeId * const node)
 	sysid_str[sizeof(sysid_str)-1] = '\0';
 
 	rv = makeRangeVar("bdr", "bdr_nodes", -1);
-	rel = heap_openrv(rv, RowExclusiveLock);
+	rel = table_openrv(rv, RowExclusiveLock);
 
 	ScanKeyInit(&key[0],
 				1,
@@ -213,7 +214,7 @@ bdr_nodes_get_local_info(const BDRNodeId * const node)
 	}
 
 	systable_endscan(scan);
-	heap_close(rel, RowExclusiveLock);
+	table_close(rel, RowExclusiveLock);
 
 	return nodeinfo;
 }
@@ -233,7 +234,7 @@ bdr_get_node_identity_by_name(const char *node_name, BDRNodeId * const nodeid)
 	bool		found = false;
 
 	rv = makeRangeVar("bdr", "bdr_nodes", -1);
-	rel = heap_openrv(rv, RowExclusiveLock);
+	rel = table_openrv(rv, RowExclusiveLock);
 
 	ScanKeyInit(&key[0],
 				5, /* node_name attno */
@@ -272,7 +273,7 @@ bdr_get_node_identity_by_name(const char *node_name, BDRNodeId * const nodeid)
 	}
 
 	systable_endscan(scan);
-	heap_close(rel, RowExclusiveLock);
+	table_close(rel, RowExclusiveLock);
 
 	return found;
 }

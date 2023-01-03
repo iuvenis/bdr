@@ -84,12 +84,12 @@ error_on_persistent_rv(RangeVar *rv,
 				 errmsg("Unqualified command %s is unsafe with BDR active.",
 						cmdtag)));
 
-	rel = heap_openrv_extended(rv, lockmode, missing_ok);
+	rel = table_openrv_extended(rv, lockmode, missing_ok);
 
 	if (rel != NULL)
 	{
 		needswal = RelationNeedsWAL(rel);
-		heap_close(rel, lockmode);
+		table_close(rel, lockmode);
 		if (needswal)
 			ereport(ERROR,
 				 (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),

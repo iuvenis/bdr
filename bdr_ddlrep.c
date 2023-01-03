@@ -15,6 +15,7 @@
 
 #include "bdr.h"
 
+#include "access/table.h"
 #include "access/xlog.h"
 
 #include "catalog/catalog.h"
@@ -65,7 +66,7 @@ bdr_queue_ddl_command(const char *command_tag, const char *command, const char *
 
 	/* prepare bdr.bdr_queued_commands for insert */
 	rv = makeRangeVar("bdr", "bdr_queued_commands", -1);
-	queuedcmds = heap_openrv(rv, RowExclusiveLock);
+	queuedcmds = table_openrv(rv, RowExclusiveLock);
 	slot = MakeSingleTupleTableSlot(RelationGetDescr(queuedcmds));
 	estate = CreateExecutorState();
 	ExecOpenIndices(estate->es_result_relation_info, false);
@@ -86,7 +87,7 @@ bdr_queue_ddl_command(const char *command_tag, const char *command, const char *
 
 	ExecCloseIndices(estate->es_result_relation_info);
 	ExecDropSingleTupleTableSlot(slot);
-	heap_close(queuedcmds, RowExclusiveLock);
+	table_close(queuedcmds, RowExclusiveLock);
 }
 
 /*

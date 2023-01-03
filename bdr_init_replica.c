@@ -919,9 +919,9 @@ bdr_init_standalone_node(BDRNodeInfo *local_node)
 	Assert(local_node->init_from_dsn == NULL);
 
 	StartTransactionCommand();
-	rel = heap_open(BdrNodesRelid, ExclusiveLock);
+	rel = table_open(BdrNodesRelid, ExclusiveLock);
 	bdr_nodes_set_local_attrs(BDR_NODE_STATUS_READY, BDR_NODE_STATUS_BEGINNING_INIT, &seq_id);
-	heap_close(rel, ExclusiveLock);
+	table_close(rel, ExclusiveLock);
 	CommitTransactionCommand();
 }
 

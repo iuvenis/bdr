@@ -556,7 +556,7 @@ bdr_conflict_log_table(BdrApplyConflict *conflict)
 	 * Construct a bdr.bdr_conflict_history tuple from the conflict info we've
 	 * been passed and insert it into bdr.bdr_conflict_history.
 	 */
-	log_rel = heap_open(BdrConflictHistoryRelId, RowExclusiveLock);
+	log_rel = table_open(BdrConflictHistoryRelId, RowExclusiveLock);
 
 	/* Prepare executor state for index updates */
 	log_estate = CreateExecutorState();
@@ -569,7 +569,7 @@ bdr_conflict_log_table(BdrApplyConflict *conflict)
 	/* Then do any index maintanence required */
 	UserTableUpdateIndexes(log_estate, log_slot);
 	/* and finish up */
-	heap_close(log_rel, RowExclusiveLock);
+	table_close(log_rel, RowExclusiveLock);
 	ExecResetTupleTable(log_estate->es_tupleTable, true);
 	FreeExecutorState(log_estate);
 }

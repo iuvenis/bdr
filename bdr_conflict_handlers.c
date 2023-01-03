@@ -193,7 +193,7 @@ bdr_create_conflict_handler(PG_FUNCTION_ARGS)
 	 *
 	 * XXX why SUE?  Wouldn't AccessShare be sufficient for that?
 	 */
-	rel = heap_open(reloid, ShareUpdateExclusiveLock);
+	rel = table_open(reloid, ShareUpdateExclusiveLock);
 
 	/* ensure that handler function is good */
 	bdr_conflict_handlers_check_handler_fun(rel, proc_oid);
@@ -287,7 +287,7 @@ bdr_create_conflict_handler(PG_FUNCTION_ARGS)
 	if (SPI_finish() != SPI_OK_FINISH)
 		elog(ERROR, "SPI_finish failed");
 
-	heap_close(rel, NoLock);
+	table_close(rel, NoLock);
 
 	AtEOXact_GUC(false, guc_nestlevel);
 
@@ -353,7 +353,7 @@ bdr_drop_conflict_handler(PG_FUNCTION_ARGS)
 
 	bdr_conflict_handlers_check_access(ch_relid);
 
-	rel = heap_open(ch_relid, ShareUpdateExclusiveLock);
+	rel = table_open(ch_relid, ShareUpdateExclusiveLock);
 
 	if (SPI_connect() != SPI_OK_CONNECT)
 		elog(ERROR, "SPI_connect failed");
@@ -417,7 +417,7 @@ bdr_drop_conflict_handler(PG_FUNCTION_ARGS)
 	if (SPI_finish() != SPI_OK_FINISH)
 		elog(ERROR, "SPI_finish failed");
 
-	heap_close(rel, NoLock);
+	table_close(rel, NoLock);
 
 	AtEOXact_GUC(false, guc_nestlevel);
 

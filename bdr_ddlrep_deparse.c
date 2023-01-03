@@ -334,7 +334,7 @@ bdr_queue_dropped_objects(PG_FUNCTION_ARGS)
 		 * The tuple slot here is only needed for updating indexes.
 		 */
 		rv = makeRangeVar("bdr", "bdr_queued_drops", -1);
-		queuedcmds = heap_openrv(rv, RowExclusiveLock);
+		queuedcmds = table_openrv(rv, RowExclusiveLock);
 		slot = MakeSingleTupleTableSlot(RelationGetDescr(queuedcmds));
 		estate = bdr_create_rel_estate(queuedcmds);
 		ExecOpenIndices(estate->es_result_relation_info, false);
@@ -352,7 +352,7 @@ bdr_queue_dropped_objects(PG_FUNCTION_ARGS)
 
 		ExecCloseIndices(estate->es_result_relation_info);
 		ExecDropSingleTupleTableSlot(slot);
-		heap_close(queuedcmds, RowExclusiveLock);
+		table_close(queuedcmds, RowExclusiveLock);
 	}
 
 	PG_RETURN_VOID();

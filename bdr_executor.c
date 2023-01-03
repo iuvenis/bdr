@@ -333,7 +333,7 @@ bdr_node_set_read_only_internal(char *node_name, bool read_only, bool force)
 	InitDirtySnapshot(SnapshotDirty);
 
 	rv = makeRangeVar("bdr", "bdr_nodes", -1);
-	rel = heap_openrv(rv, RowExclusiveLock);
+	rel = table_openrv(rv, RowExclusiveLock);
 
 	ScanKeyInit(&key,
 				get_attnum(rel->rd_id, "node_name"),
@@ -377,7 +377,7 @@ bdr_node_set_read_only_internal(char *node_name, bool read_only, bool force)
 	CommandCounterIncrement();
 
 	/* now release lock again,  */
-	heap_close(rel, RowExclusiveLock);
+	table_close(rel, RowExclusiveLock);
 
 	bdr_connections_changed(NULL);
 }

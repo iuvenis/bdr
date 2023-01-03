@@ -854,11 +854,11 @@ process_remote_insert(StringInfo s)
 			process_queued_drop(ht);
 		}
 
-		qrel = heap_open(QueuedDDLCommandsRelid, RowExclusiveLock);
+		qrel = table_open(QueuedDDLCommandsRelid, RowExclusiveLock);
 
 		UnlockRelationIdForSession(&lockid, RowExclusiveLock);
 
-		heap_close(qrel, NoLock);
+		table_close(qrel, NoLock);
 
 		if (oldxid != GetTopTransactionId())
 		{
@@ -1652,7 +1652,7 @@ process_queued_ddl_command(HeapTuple cmdtup, bool tx_just_started)
 	 */
 	oldcontext = MemoryContextSwitchTo(MessageContext);
 
-	cmdsrel = heap_open(QueuedDDLCommandsRelid, NoLock);
+	cmdsrel = table_open(QueuedDDLCommandsRelid, NoLock);
 
 	/* fetch the perpetrator user identifier */
 	datum = heap_getattr(cmdtup, 3,
@@ -1697,7 +1697,7 @@ process_queued_ddl_command(HeapTuple cmdtup, bool tx_just_started)
 		search_path = TextDatumGetCString(datum);
 
 	/* close relation, command execution might end/start xact */
-	heap_close(cmdsrel, NoLock);
+	table_close(cmdsrel, NoLock);
 
 	MemoryContextSwitchTo(oldcontext);
 
@@ -1779,7 +1779,7 @@ process_queued_drop(HeapTuple cmdtup)
 	ObjectAddresses *addresses;
 	ErrorContextCallback errcallback;
 
-	cmdsrel = heap_open(QueuedDropsRelid, AccessShareLock);
+	cmdsrel = table_open(QueuedDropsRelid, AccessShareLock);
 	arrayDatum = heap_getattr(cmdtup, 3,
 							  RelationGetDescr(cmdsrel),
 							  &null);
@@ -1993,7 +1993,7 @@ process_queued_drop(HeapTuple cmdtup)
 
 	newtup = cmdtup;
 
-	heap_close(cmdsrel, AccessShareLock);
+	table_close(cmdsrel, AccessShareLock);
 
 	return newtup;
 }
