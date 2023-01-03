@@ -38,6 +38,7 @@
 
 #include "executor/executor.h"
 #include "executor/spi.h"
+#include "executor/tuptable.h"
 
 #include "libpq/pqformat.h"
 
@@ -590,6 +591,8 @@ process_remote_insert(StringInfo s)
 	BDRTupleData new_tuple;
 	TupleTableSlot *newslot;
 	TupleTableSlot *oldslot;
+        HeapTupleTableSlot *oldhslot;
+        HeapTupleTableSlot *newhslot;
 	BDRRelation	*rel;
 	bool		started_tx;
 	ResultRelInfo *relinfo;
@@ -667,6 +670,8 @@ process_remote_insert(StringInfo s)
 
 	build_index_scan_keys(relinfo, index_keys, &new_tuple);
 
+        oldhslot = (HeapTupleTableSlot*) oldslot;
+        newhslot = (HeapTupleTableSlot*) newslot;
 	/* do a SnapshotDirty search for conflicting tuples */
 	for (i = 0; i < relinfo->ri_NumIndices; i++)
 	{
@@ -696,7 +701,7 @@ process_remote_insert(StringInfo s)
 		/* alert if there's more than one conflicting unique key */
 		if (found &&
 			ItemPointerIsValid(&conflicting_tid) &&
-			!ItemPointerEquals(&oldslot->tts_tuple->t_self,
+			!ItemPointerEquals(&oldhslot->tuple->t_self,
 							   &conflicting_tid))
 		{
 			/* TODO: Report tuple identity in log */
@@ -711,7 +716,7 @@ process_remote_insert(StringInfo s)
 		}
 		else if (found)
 		{
-			ItemPointerCopy(&oldslot->tts_tuple->t_self, &conflicting_tid);
+			ItemPointerCopy(&oldhslot->tuple->t_self, &conflicting_tid);
 			conflict = true;
 			break;
 		}
@@ -737,7 +742,7 @@ process_remote_insert(StringInfo s)
 		BdrApplyConflict *apply_conflict = NULL; /* Mute compiler */
 		BdrConflictResolution resolution;
 
-		get_local_tuple_origin(oldslot->tts_tuple, &local_ts, &local_node_id);
+		get_local_tuple_origin(oldhslot->tuple, &local_ts, &local_node_id);
 
 		/*
 		 * Use conflict triggers and/or last-update-wins to decide which tuple
@@ -745,7 +750,7 @@ process_remote_insert(StringInfo s)
 		 */
 		check_apply_update(BdrConflictType_InsertInsert,
 						   local_node_id, local_ts, rel,
-						   oldslot->tts_tuple, newslot->tts_tuple, &user_tuple,
+						   oldhslot->tuple, newhslot->tuple, &user_tuple,
 						   &apply_update, &log_update, &resolution);
 
 		/*
@@ -781,8 +786,8 @@ process_remote_insert(StringInfo s)
 			}
 
 			simple_heap_update(rel->rel,
-							   &oldslot->tts_tuple->t_self,
-							   newslot->tts_tuple);
+							   &oldhslot->tuple->t_self,
+							   newhslot->tuple);
 			/* races will be resolved by abort/retry */
 			UserTableUpdateOpenIndexes(estate, newslot);
 
@@ -798,7 +803,7 @@ process_remote_insert(StringInfo s)
 	}
 	else
 	{
-		simple_heap_insert(rel->rel, newslot->tts_tuple);
+		simple_heap_insert(rel->rel, newhslot->tuple);
 		UserTableUpdateOpenIndexes(estate, newslot);
 		bdr_count_insert();
 	}
@@ -828,7 +833,7 @@ process_remote_insert(StringInfo s)
 		 * Release transaction bound resources for CONCURRENTLY support.
 		 */
 		MemoryContextSwitchTo(MessageContext);
-		ht = heap_copytuple(newslot->tts_tuple);
+		ht = heap_copytuple(newhslot->tuple);
 
 		LockRelationIdForSession(&lockid, RowExclusiveLock);
 		bdr_heap_close(rel, NoLock);
