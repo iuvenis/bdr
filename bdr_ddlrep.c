@@ -239,7 +239,7 @@ bdr_capture_ddl(Node *parsetree, const char *queryString,
        {
                Oid nspid = lfirst_oid(lc);
                char *nspname;
-               if (IsSystemNamespace(nspid) || IsToastNamespace(nspid) || isTempOrTempToastNamespace(nspid))
+               if (IsCatalogNamespace(nspid) || IsToastNamespace(nspid) || isTempOrTempToastNamespace(nspid))
                        continue;
                nspname = get_namespace_name(nspid);
                if (!first)
