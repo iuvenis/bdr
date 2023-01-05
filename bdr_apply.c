@@ -639,7 +639,7 @@ process_remote_insert(StringInfo s)
 		elog(ERROR, "expected new tuple but got %d",
 			 action);
 
-	estate = CreateExecutorState();
+	estate = bdr_create_rel_estate(rel->rel);
 	newslot = ExecInitExtraTupleSlot(estate, NULL, &TTSOpsHeapTuple);
 	oldslot = ExecInitExtraTupleSlot(estate, NULL, &TTSOpsHeapTuple);
 	ExecSetSlotDescriptor(newslot, RelationGetDescr(rel->rel));
@@ -665,7 +665,7 @@ process_remote_insert(StringInfo s)
 	/*
 	 * Search for conflicting tuples.
 	 */
-        relinfo = bdr_create_result_rel_info(rel->rel);
+        relinfo = estate->es_result_relations[0];
 	ExecOpenIndices(relinfo, false);
 	index_keys = palloc0(relinfo->ri_NumIndices * sizeof(ScanKeyData*));
 	conflicts = palloc0(relinfo->ri_NumIndices * sizeof(ItemPointerData));
@@ -933,7 +933,7 @@ process_remote_update(StringInfo s)
 		elog(ERROR, "expected action 'N' or 'K', got %c",
 			 action);
 
-	estate = CreateExecutorState();
+	estate = bdr_create_rel_estate(rel->rel);
 	oldslot = ExecInitExtraTupleSlot(estate, NULL, &TTSOpsHeapTuple);
 	ExecSetSlotDescriptor(oldslot, RelationGetDescr(rel->rel));
 	newslot = ExecInitExtraTupleSlot(estate, NULL, &TTSOpsHeapTuple);
@@ -1199,7 +1199,7 @@ process_remote_delete(StringInfo s)
 		return;
 	}
 
-	estate = CreateExecutorState();
+	estate = bdr_create_rel_estate(rel->rel);
 	oldslot = ExecInitExtraTupleSlot(estate, NULL, &TTSOpsHeapTuple);
 	ExecSetSlotDescriptor(oldslot, RelationGetDescr(rel->rel));
 

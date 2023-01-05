@@ -22,6 +22,7 @@
 #include "catalog/namespace.h"
 
 #include "executor/executor.h"
+#include "executor/tuptable.h"
 
 #include "miscadmin.h"
 
@@ -67,9 +68,9 @@ bdr_queue_ddl_command(const char *command_tag, const char *command, const char *
 	/* prepare bdr.bdr_queued_commands for insert */
 	rv = makeRangeVar("bdr", "bdr_queued_commands", -1);
 	queuedcmds = table_openrv(rv, RowExclusiveLock);
-	slot = MakeSingleTupleTableSlot(RelationGetDescr(queuedcmds));
-	estate = CreateExecutorState();
-	ExecOpenIndices(estate->es_result_relation_info, false);
+	slot = MakeSingleTupleTableSlot(RelationGetDescr(queuedcmds), &TTSOpsHeapTuple);
+	estate = bdr_create_rel_estate(queuedcmds);
+	ExecOpenIndices(estate->es_result_relations[0], false);
 
 	/* lsn, queued_at, perpetrator, command_tag, command */
 	MemSet(nulls, 0, sizeof(nulls));
@@ -85,7 +86,7 @@ bdr_queue_ddl_command(const char *command_tag, const char *command, const char *
 	ExecStoreHeapTuple(newtup, slot, false);
 	UserTableUpdateOpenIndexes(estate, slot);
 
-	ExecCloseIndices(estate->es_result_relation_info);
+	ExecCloseIndices(estate->es_result_relations[0]);
 	ExecDropSingleTupleTableSlot(slot);
 	table_close(queuedcmds, RowExclusiveLock);
 }

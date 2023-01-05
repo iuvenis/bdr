@@ -10,7 +10,6 @@
  *
  * -------------------------------------------------------------------------
  */
-#include "executor/executor.h"
 #include "postgres.h"
 
 #include "bdr.h"
@@ -559,7 +558,7 @@ bdr_conflict_log_table(BdrApplyConflict *conflict)
 	log_rel = table_open(BdrConflictHistoryRelId, RowExclusiveLock);
 
 	/* Prepare executor state for index updates */
-	log_estate = CreateExecutorState();
+	log_estate = bdr_create_rel_estate(log_rel);
 	log_slot = ExecInitExtraTupleSlot(log_estate, NULL);
 	ExecSetSlotDescriptor(log_slot, RelationGetDescr(log_rel));
 	/* Construct the tuple and insert it */
