@@ -127,7 +127,6 @@ filter_CreateStmt(Node *parsetree,
 {
 	CreateStmt *stmt;
 	ListCell   *cell;
-	bool		with_oids = default_with_oids;
 
 	stmt = (CreateStmt *) parsetree;
 
@@ -136,26 +135,6 @@ filter_CreateStmt(Node *parsetree,
 
 	if (stmt->ofTypename != NULL)
 		error_unsupported_command("CREATE TABLE ... OF TYPE");
-
-	/* verify WITH options */
-	foreach(cell, stmt->options)
-	{
-		DefElem    *def = (DefElem *) lfirst(cell);
-
-		/* reject WITH OIDS */
-		if (def->defnamespace == NULL &&
-			pg_strcasecmp(def->defname, "oids") == 0)
-		{
-			with_oids = defGetBoolean(def);
-		}
-	}
-
-	if (with_oids)
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("Tables WITH OIDs are not supported with bdr")));
-	}
 
 	/* verify table elements */
 	foreach(cell, stmt->tableElts)

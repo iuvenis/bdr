@@ -62,7 +62,6 @@ static void _printTocEntry(ArchiveHandle *AH, TocEntry *te, bool isData);
 static char *replace_line_endings(const char *str);
 static void _doSetFixedOutputState(ArchiveHandle *AH);
 static void _doSetSessionAuth(ArchiveHandle *AH, const char *user);
-static void _doSetWithOids(ArchiveHandle *AH, const bool withOids);
 static void _reconnectToDB(ArchiveHandle *AH, const char *dbname);
 static void _becomeUser(ArchiveHandle *AH, const char *user);
 static void _becomeOwner(ArchiveHandle *AH, TocEntry *te);
@@ -3201,38 +3200,6 @@ _doSetSessionAuth(ArchiveHandle *AH, const char *user)
 
 
 /*
- * Issue a SET default_with_oids command.  Caller is responsible
- * for updating state if appropriate.
- */
-static void
-_doSetWithOids(ArchiveHandle *AH, const bool withOids)
-{
-	PQExpBuffer cmd = createPQExpBuffer();
-
-	appendPQExpBuffer(cmd, "SET default_with_oids = %s;", withOids ?
-					  "true" : "false");
-
-	if (RestoringToDB(AH))
-	{
-		PGresult   *res;
-
-		res = PQexec(AH->connection, cmd->data);
-
-		if (!res || PQresultStatus(res) != PGRES_COMMAND_OK)
-			warn_or_exit_horribly(AH, modulename,
-								  "could not set default_with_oids: %s",
-								  PQerrorMessage(AH->connection));
-
-		PQclear(res);
-	}
-	else
-		ahprintf(AH, "%s\n\n", cmd->data);
-
-	destroyPQExpBuffer(cmd);
-}
-
-
-/*
  * Issue the commands to connect to the specified database.
  *
  * If we're currently restoring right into a database, this will
@@ -3320,20 +3287,6 @@ _becomeOwner(ArchiveHandle *AH, TocEntry *te)
 		return;
 
 	_becomeUser(AH, te->owner);
-}
-
-
-/*
- * Set the proper default_with_oids value for the table.
- */
-static void
-_setWithOids(ArchiveHandle *AH, TocEntry *te)
-{
-	if (AH->currWithOids != te->withOids)
-	{
-		_doSetWithOids(AH, te->withOids);
-		AH->currWithOids = te->withOids;
-	}
 }
 
 
@@ -3550,10 +3503,6 @@ _printTocEntry(ArchiveHandle *AH, TocEntry *te, bool isData)
 	_becomeOwner(AH, te);
 	_selectOutputSchema(AH, te->namespace);
 	_selectTablespace(AH, te->tablespace);
-
-	/* Set up OID mode too */
-	if (strcmp(te->desc, "TABLE") == 0)
-		_setWithOids(AH, te);
 
 	/* Emit header comment for item */
 	if (!AH->noTocComments)
