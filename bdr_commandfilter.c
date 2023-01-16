@@ -166,7 +166,7 @@ filter_AlterTableStmt(Node *parsetree,
 	ListCell   *cell,
 			   *cell1;
 	bool		hasInvalid;
-	List	   *stmts;
+	List	   *stmts, *beforeStmts, *afterStmts;
 	Oid			relid;
 	LOCKMODE	lockmode;
 
@@ -184,7 +184,11 @@ filter_AlterTableStmt(Node *parsetree,
 	lockmode = ShareUpdateExclusiveLock;
 	relid = AlterTableLookupRelation(astmt, lockmode);
 
-	stmts = transformAlterTableStmt(relid, astmt, queryString);
+	astmt = transformAlterTableStmt(relid, astmt, queryString, &beforeStmts, &afterStmts);
+	
+	stmts = list_concat(stmts, beforeStmts);
+	stmts = lappend(stmts, (Node *) astmt);
+	stmts = list_concat(stmts, afterStmts);
 
 	foreach(cell, stmts)
 	{
