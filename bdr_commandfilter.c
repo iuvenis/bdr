@@ -300,7 +300,6 @@ filter_AlterTableStmt(Node *parsetree,
 					break;
 
 				case AT_AddConstraint:
-				case AT_ProcessedConstraint:
 					if (IsA(stmt->def, Constraint))
 					{
 						Constraint *con = (Constraint *) stmt->def;
@@ -351,7 +350,6 @@ filter_AlterTableStmt(Node *parsetree,
 										   astmt->missing_ok);
 					break;
 
-				case AT_AddOids:
 				case AT_DropOids:
 					error_on_persistent_rv(astmt->relation,
 										   "ALTER TABLE ... SET WITH[OUT] OIDS",
