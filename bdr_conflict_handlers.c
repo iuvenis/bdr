@@ -36,6 +36,7 @@
 
 #include "replication/origin.h"
 
+#include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/guc.h"
 #include "utils/inval.h"
