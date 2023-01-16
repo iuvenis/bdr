@@ -12,6 +12,7 @@
  *
  * -------------------------------------------------------------------------
  */
+#include "catalog/pg_type_d.h"
 #include "postgres.h"
 
 #include "access/heapam.h"
@@ -22,6 +23,7 @@
 #include "catalog/catalog.h"
 #include "catalog/dependency.h"
 #include "catalog/namespace.h"
+#include "catalog/pg_enum.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_type.h"
 
@@ -85,23 +87,23 @@ bdr_conflict_handlers_init(void)
 		elog(ERROR, "cache lookup failed for relation bdr.bdr_conflict_handlers");
 
 	bdr_conflict_handler_type_oid =
-		GetSysCacheOidError2(TYPENAMENSP, PointerGetDatum("bdr_conflict_type"),
+		GetSysCacheOidError2(TYPENAMENSP, Anum_pg_type_oid, PointerGetDatum("bdr_conflict_type"),
 							 ObjectIdGetDatum(schema_oid));
 
 	bdr_conflict_handler_action_oid =
-		GetSysCacheOidError2(TYPENAMENSP, PointerGetDatum("bdr_conflict_handler_action"),
+		GetSysCacheOidError2(TYPENAMENSP, Anum_pg_type_oid, PointerGetDatum("bdr_conflict_handler_action"),
 							 ObjectIdGetDatum(schema_oid));
 
 	bdr_conflict_handler_action_ignore_oid =
-		GetSysCacheOidError2(ENUMTYPOIDNAME, bdr_conflict_handler_action_oid,
+		GetSysCacheOidError2(ENUMTYPOIDNAME, Anum_pg_enum_oid, bdr_conflict_handler_action_oid,
 							 CStringGetDatum("IGNORE"));
 
 	bdr_conflict_handler_action_row_oid =
-		GetSysCacheOidError2(ENUMTYPOIDNAME, bdr_conflict_handler_action_oid,
+		GetSysCacheOidError2(ENUMTYPOIDNAME, Anum_pg_enum_oid, bdr_conflict_handler_action_oid,
 							 CStringGetDatum("ROW"));
 
 	bdr_conflict_handler_action_skip_oid =
-		GetSysCacheOidError2(ENUMTYPOIDNAME, bdr_conflict_handler_action_oid,
+		GetSysCacheOidError2(ENUMTYPOIDNAME, Anum_pg_enum_oid, bdr_conflict_handler_action_oid,
 							 CStringGetDatum("SKIP"));
 }
 
@@ -694,6 +696,7 @@ bdr_conflict_handlers_resolve(BDRRelation * rel, const HeapTuple local,
 	bdr_get_conflict_handlers(rel);
 
 	event_oid = GetSysCacheOidError2(ENUMTYPOIDNAME,
+									 Anum_pg_enum_oid,
 									 bdr_conflict_handler_type_oid,
 									 CStringGetDatum(event));
 

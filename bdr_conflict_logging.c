@@ -10,6 +10,7 @@
  *
  * -------------------------------------------------------------------------
  */
+#include "catalog/pg_type_d.h"
 #include "postgres.h"
 
 #include "bdr.h"
@@ -76,14 +77,14 @@ bdr_conflict_logging_startup()
 
 	schema_oid = get_namespace_oid("bdr", false);
 
-	BdrConflictTypeOid = GetSysCacheOidError2(TYPENAMENSP,
+	BdrConflictTypeOid = GetSysCacheOidError2(TYPENAMENSP, Anum_pg_type_oid,
 		CStringGetDatum("bdr_conflict_type"), ObjectIdGetDatum(schema_oid));
 
-	BdrConflictResolutionOid = GetSysCacheOidError2(TYPENAMENSP,
+	BdrConflictResolutionOid = GetSysCacheOidError2(TYPENAMENSP, Anum_pg_type_oid,
 		CStringGetDatum("bdr_conflict_resolution"),
 		ObjectIdGetDatum(schema_oid));
 
-	BdrConflictHistorySeqId = GetSysCacheOidError2(RELNAMENSP,
+	BdrConflictHistorySeqId = GetSysCacheOidError2(RELNAMENSP, Anum_pg_class_oid,
 		CStringGetDatum("bdr_conflict_history_id_seq"),
 		ObjectIdGetDatum(schema_oid));
 

@@ -10,6 +10,7 @@
 #ifndef BDR_H
 #define BDR_H
 
+#include "access/attnum.h"
 #include "access/xlogdefs.h"
 #include "access/xlog.h"
 #include "nodes/execnodes.h"
@@ -628,13 +629,13 @@ extern List* bdr_read_connection_configs(void);
 /* return a node name or (none) if unknown for given nodeid */
 extern const char * bdr_nodeid_name(const BDRNodeId * const node, bool missing_ok);
 
-extern Oid GetSysCacheOidError(int cacheId, Datum key1, Datum key2, Datum key3,
+extern Oid GetSysCacheOidError(int cacheId, AttrNumber oidcol, Datum key1, Datum key2, Datum key3,
 							   Datum key4);
 
 extern bool bdr_get_node_identity_by_name(const char *node_name, BDRNodeId * out_nodeid);
 
-#define GetSysCacheOidError2(cacheId, key1, key2) \
-	GetSysCacheOidError(cacheId, key1, key2, 0, 0)
+#define GetSysCacheOidError2(cacheId, oidcol, key1, key2) \
+	GetSysCacheOidError(cacheId, oidcol, key1, key2, 0, 0)
 
 extern void
 stringify_my_node_identity(char *sysid_str, Size sysid_str_size,

@@ -14,11 +14,14 @@
  * -------------------------------------------------------------------------
  */
 
+#include "catalog/pg_namespace_d.h"
 #include "postgres.h"
 
 #include "bdr.h"
 #include "miscadmin.h"
 
+#include "access/genam.h"
+#include "access/skey.h"
 #include "access/table.h"
 #include "access/xact.h"
 
@@ -30,6 +33,7 @@
 
 #include "nodes/makefuncs.h"
 
+#include "postgres_ext.h"
 #include "replication/origin.h"
 
 #include "utils/builtins.h"
@@ -48,27 +52,25 @@ Datum bdr_node_status_from_char(PG_FUNCTION_ARGS);
 PG_FUNCTION_INFO_V1(bdr_node_status_to_char);
 PG_FUNCTION_INFO_V1(bdr_node_status_from_char);
 
-/* GetSysCacheOid equivalent that errors out if nothing is found */
+/* GetSysCacheOid wrapper that errors out if nothing is found */
 Oid
 GetSysCacheOidError(int cacheId,
+					AttrNumber oidcol,
 					Datum key1,
 					Datum key2,
 					Datum key3,
 					Datum key4)
 {
-	HeapTuple	tuple;
 	Oid			result;
-
-	tuple = SearchSysCache(cacheId, key1, key2, key3, key4);
-	if (!HeapTupleIsValid(tuple))
+	
+	result = GetSysCacheOid(cacheId, oidcol, key1, key2, key3, key4);
+	if (result == InvalidOid)
 		elog(ERROR, "cache lookup failure in cache %d", cacheId);
-	result = HeapTupleGetOid(tuple);
-	ReleaseSysCache(tuple);
 	return result;
 }
 
-#define GetSysCacheOidError2(cacheId, key1, key2) \
-	GetSysCacheOidError(cacheId, key1, key2, 0, 0)
+#define GetSysCacheOidError2(cacheId, oidcol, key1, key2) \
+	GetSysCacheOidError(cacheId, oidcol, key1, key2, 0, 0)
 
 /*
  * Get the bdr.bdr_nodes status value for the specified node from the local
@@ -101,7 +103,7 @@ bdr_nodes_get_local_status(const BDRNodeId * const node)
 	 *
 	 * Check for a bdr schema.
 	 */
-	schema_oid = GetSysCacheOid1(NAMESPACENAME, CStringGetDatum("bdr"));
+	schema_oid = GetSysCacheOid1(NAMESPACENAME, Anum_pg_namespace_oid, CStringGetDatum("bdr"));
 	if (schema_oid == InvalidOid)
 		ereport(ERROR, (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
 				errmsg("No bdr schema is present in database %s, cannot create a bdr slot",

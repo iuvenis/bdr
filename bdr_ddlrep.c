@@ -15,6 +15,7 @@
 
 #include "bdr.h"
 
+#include "access/heapam.h"
 #include "access/table.h"
 #include "access/xlog.h"
 
