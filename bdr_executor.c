@@ -18,12 +18,14 @@
 
 #include "bdr.h"
 
+#include "access/skey.h"
 #include "access/xact.h"
 
 #include "catalog/indexing.h"
 #include "catalog/pg_namespace.h"
 
 #include "executor/executor.h"
+#include "executor/tuptable.h"
 
 #include "miscadmin.h"
 
@@ -85,31 +87,33 @@ bdr_create_result_rel_info(Relation rel)
 }
 
 void
-UserTableUpdateIndexes(EState *estate, TupleTableSlot *slot)
+UserTableUpdateIndexes(EState *estate, TupleTableSlot *slot, bool update)
 {
 	/* HOT update does not require index inserts */
-	if (HeapTupleIsHeapOnly(slot->tts_tuple))
+	if (HeapTupleIsHeapOnly(((HeapTupleTableSlot *) slot)->tuple))
 		return;
 
-	ExecOpenIndices(estate->es_result_relation_info, false);
-	UserTableUpdateOpenIndexes(estate, slot);
-	ExecCloseIndices(estate->es_result_relation_info);
+	ExecOpenIndices(estate->es_result_relations[0], false);
+	UserTableUpdateOpenIndexes(estate, slot, update);
+	ExecCloseIndices(estate->es_result_relations[0]);
 }
 
 void
-UserTableUpdateOpenIndexes(EState *estate, TupleTableSlot *slot)
+UserTableUpdateOpenIndexes(EState *estate, TupleTableSlot *slot, bool update)
 {
 	List	   *recheckIndexes = NIL;
+	HeapTuple   tuple = ((HeapTupleTableSlot *) slot)->tuple;
 
 	/* HOT update does not require index inserts */
-	if (HeapTupleIsHeapOnly(slot->tts_tuple))
+	if (HeapTupleIsHeapOnly(tuple))
 		return;
 
-	if (estate->es_result_relation_info->ri_NumIndices > 0)
+	if (estate->es_result_relations[0]->ri_NumIndices > 0)
 	{
-		recheckIndexes = ExecInsertIndexTuples(slot,
-											   		 &slot->tts_tuple->t_self,
+		recheckIndexes = ExecInsertIndexTuples(estate->es_result_relations[0],
+											   		 slot,
 											   		 estate,
+													 update,
 													 false, NULL, NIL);
 
 		if (recheckIndexes != NIL)

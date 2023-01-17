@@ -565,7 +565,7 @@ bdr_conflict_log_table(BdrApplyConflict *conflict)
 	ExecStoreHeapTuple(log_tup, log_slot, true);
 	simple_heap_insert(log_rel, ((HeapTupleTableSlot *) log_slot)->tuple);
 	/* Then do any index maintanence required */
-	UserTableUpdateIndexes(log_estate, log_slot);
+	UserTableUpdateIndexes(log_estate, log_slot, false);
 	/* and finish up */
 	table_close(log_rel, RowExclusiveLock);
 	ExecResetTupleTable(log_estate->es_tupleTable, true);

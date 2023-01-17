@@ -791,7 +791,7 @@ process_remote_insert(StringInfo s)
 							   &oldhslot->tuple->t_self,
 							   newhslot->tuple);
 			/* races will be resolved by abort/retry */
-			UserTableUpdateOpenIndexes(estate, newslot);
+			UserTableUpdateOpenIndexes(estate, newslot, true);
 
 			bdr_count_insert();
 		}
@@ -806,7 +806,7 @@ process_remote_insert(StringInfo s)
 	else
 	{
 		simple_heap_insert(rel->rel, newhslot->tuple);
-		UserTableUpdateOpenIndexes(estate, newslot);
+		UserTableUpdateOpenIndexes(estate, newslot, false);
 		bdr_count_insert();
 	}
 
@@ -1059,7 +1059,7 @@ process_remote_update(StringInfo s)
 			}
 
 			simple_heap_update(rel->rel, &oldhslot->tuple->t_self, newhslot->tuple);
-			UserTableUpdateIndexes(estate, newslot);
+			UserTableUpdateIndexes(estate, newslot, true);
 			bdr_count_update();
 		}
 
@@ -1121,7 +1121,7 @@ process_remote_update(StringInfo s)
 			ExecStoreHeapTuple(user_tuple, newslot, true);
 
 			simple_heap_insert(rel->rel, newhslot->tuple);
-			UserTableUpdateOpenIndexes(estate, newslot);
+			UserTableUpdateOpenIndexes(estate, newslot, false);
 		}
 
 		bdr_conflict_log_table(apply_conflict);
