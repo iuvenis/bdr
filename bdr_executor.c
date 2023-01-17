@@ -18,6 +18,7 @@
 
 #include "bdr.h"
 
+#include "access/genam.h"
 #include "access/skey.h"
 #include "access/xact.h"
 
@@ -244,7 +245,6 @@ bool
 find_pkey_tuple(ScanKey skey, BDRRelation *rel, Relation idxrel,
 				TupleTableSlot *slot, bool lock, LockTupleMode mode)
 {
-	HeapTuple	scantuple;
 	bool		found;
 	IndexScanDesc scan;
 	SnapshotData snap;
@@ -260,16 +260,9 @@ retry:
 						   0);
 	index_rescan(scan, skey, RelationGetNumberOfAttributes(idxrel), NULL, 0);
 
-	if ((scantuple = index_getnext(scan, ForwardScanDirection)) != NULL)
+	if (index_getnext_slot(scan, ForwardScanDirection, slot))
 	{
 		found = true;
-		/*
-		 * Store a copied physical tuple that doesn't reference shmem or hold
-		 * any buffer pin, so it can live past the index scan. Any old tuple
-		 * from a prior loop is cleared first.
-		 */
-		/* FIXME: Improve TupleSlot to not require copying the whole tuple */
-		ExecStoreHeapTuple(scantuple, slot, false);
 		ExecMaterializeSlot(slot);
 
 		xwait = TransactionIdIsValid(snap.xmin) ?  snap.xmin : snap.xmax;
