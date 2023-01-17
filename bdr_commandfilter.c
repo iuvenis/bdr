@@ -39,6 +39,7 @@
 
 #include "storage/standby.h"
 
+#include "tcop/cmdtag.h"
 #include "tcop/utility.h"
 
 #include "utils/guc.h"
@@ -122,8 +123,7 @@ static bool ispermanent(const char persistence)
 }
 
 static void
-filter_CreateStmt(Node *parsetree,
-				  char *completionTag)
+filter_CreateStmt(Node *parsetree)
 {
 	CreateStmt *stmt;
 	ListCell   *cell;
@@ -158,7 +158,6 @@ filter_CreateStmt(Node *parsetree,
 
 static void
 filter_AlterTableStmt(Node *parsetree,
-					  char *completionTag,
 					  const char *queryString,
 					  BDRLockType *lock_type)
 {
@@ -765,9 +764,14 @@ prevent_drop_extension_bdr(DropStmt *stmt)
 	}
 }
 
+/*
+ * Make sure we don't execute SQL commands incompatible with BDR.
+ * Note: Don't modify pstmt!
+ */
 static void
 bdr_commandfilter(PlannedStmt *pstmt,
 				  const char *queryString,
+				  bool readOnlyTree,
 				  ProcessUtilityContext context,
 				  ParamListInfo params,
                                   QueryEnvironment *queryEnv,
@@ -775,7 +779,7 @@ bdr_commandfilter(PlannedStmt *pstmt,
 #ifdef XCP
                                   bool sentToRemote,
 #endif
-				  char *completionTag)
+				  QueryCompletion *qc)
 {
         Node       *parsetree = pstmt->utilityStmt;
 	bool incremented_nestlevel = false;
@@ -1034,7 +1038,7 @@ bdr_commandfilter(PlannedStmt *pstmt,
 			break;
 
 		case T_CreateStmt:
-			filter_CreateStmt(parsetree, completionTag);
+			filter_CreateStmt(parsetree);
 			lock_type = BDR_LOCK_DDL;
 			break;
 
@@ -1043,7 +1047,7 @@ bdr_commandfilter(PlannedStmt *pstmt,
 			break;
 
 		case T_AlterTableStmt:
-			filter_AlterTableStmt(parsetree, completionTag, queryString, &lock_type);
+			filter_AlterTableStmt(parsetree, queryString, &lock_type);
 			break;
 
 		case T_AlterDomainStmt:
@@ -1330,7 +1334,7 @@ bdr_commandfilter(PlannedStmt *pstmt,
                         ereport(ERROR,
                                         (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
                                          errmsg("DDL command attempted inside function or multi-statement string"),
-                                         errdetail("9.6BDR does not support transparent DDL replication for "
+                                         errdetail("BDR2 does not support transparent DDL replication for "
                                                            "multi-statement strings or function bodies containing DDL "
                                                            "commands. Problem statement has tag [%s] in SQL string: %s",
                                                            CreateCommandTag(parsetree), queryString),
@@ -1396,11 +1400,11 @@ done:
 	PG_TRY();
 	{
 		if (next_ProcessUtility_hook)
-			next_ProcessUtility_hook(pstmt, queryString, context, params, queryEnv,
-									 dest, completionTag);
+			next_ProcessUtility_hook(pstmt, queryString, readOnlyTree, context, params, queryEnv,
+									 dest, qc);
 		else
-			standard_ProcessUtility(pstmt, queryString, context, params, queryEnv,
-									dest, completionTag);
+			standard_ProcessUtility(pstmt, queryString, readOnlyTree, context, params, queryEnv,
+									dest, qc);
 	}
 	PG_CATCH();
 	{
