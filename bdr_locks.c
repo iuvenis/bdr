@@ -161,6 +161,7 @@
 #include "miscadmin.h"
 
 #include "access/genam.h"
+#include "access/heapam.h"
 #include "access/skey.h"
 #include "access/table.h"
 #include "access/xact.h"

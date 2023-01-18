@@ -18,6 +18,7 @@
 #include "access/heapam.h"
 #include "access/xact.h"
 #include "catalog/namespace.h"
+#include "common/hashfn.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "utils/catcache.h"

@@ -22,7 +22,6 @@
 #include "miscadmin.h"
 
 #include "access/sysattr.h"
-#include "access/tuptoaster.h"
 #include "access/xact.h"
 
 #include "catalog/catversion.h"
