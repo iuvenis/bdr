@@ -627,8 +627,7 @@ bdr_init_wait_for_slot_creation()
 {
 	List	   *configs;
 	ListCell   *lc;
-	ListCell   *next,
-			   *prev;
+	ListCell   *next;
 
 	BDRNodeId	myid;
 	bdr_make_my_nodeid(&myid);
@@ -643,24 +642,21 @@ bdr_init_wait_for_slot_creation()
 	configs = bdr_read_connection_configs();
 
 	/* Cleanup the config list from the ones we are not insterested in. */
-	prev = NULL;
 	for (lc = list_head(configs); lc; lc = next)
 	{
 		BdrConnectionConfig *cfg = lfirst(lc);
 
 		/* We might delete the cell so advance it now. */
-		next = lnext(lc);
+		next = lnext(configs, lc);
 
 		/*
 		 * We won't see an inbound slot from our own node.
 		 */
 		if (bdr_nodeid_eq(&cfg->remote_node, &myid))
 		{
-			configs = list_delete_cell(configs, lc, prev);
+			configs = list_delete_cell(configs, lc);
 			break;
 		}
-		else
-			prev = lc;
 	}
 
 	/*
