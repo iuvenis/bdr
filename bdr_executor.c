@@ -18,6 +18,8 @@
 
 #include "bdr.h"
 
+#include "access/heapam.h"
+#include "access/tableam.h"
 #include "access/genam.h"
 #include "access/skey.h"
 #include "access/xact.h"
@@ -278,16 +280,16 @@ retry:
 	if (lock && found)
 	{
 		Buffer buf;
-		HeapUpdateFailureData hufd;
-		HTSU_Result res;
+		TM_FailureData hufd;
+		TM_Result res;
 		HeapTupleData locktup;
 
-		ItemPointerCopy(&slot->tts_tuple->t_self, &locktup.t_self);
+		ItemPointerCopy(&(slot->tts_ops->get_heap_tuple(slot)->t_self), &locktup.t_self);
 
 		PushActiveSnapshot(GetLatestSnapshot());
 
 		res = heap_lock_tuple(rel->rel, &locktup, GetCurrentCommandId(false), mode,
-							  false /* wait */,
+							  LockWaitBlock /* wait */,
 							  false /* don't follow updates */,
 							  &buf, &hufd);
 		/* the tuple slot already has the buffer pinned */
@@ -297,9 +299,9 @@ retry:
 
 		switch (res)
 		{
-			case HeapTupleMayBeUpdated:
+			case TM_Ok:
 				break;
-			case HeapTupleUpdated:
+			case TM_Updated:
 				/* XXX: Improve handling here */
 				ereport(LOG,
 						(errcode(ERRCODE_T_R_SERIALIZATION_FAILURE),
@@ -307,7 +309,7 @@ retry:
 				index_endscan(scan);
 				goto retry;
 			default:
-				elog(ERROR, "unexpected HTSU_Result after locking: %u", res);
+				elog(ERROR, "unexpected TM_Result after locking: %u", res);
 				break;
 		}
 	}
