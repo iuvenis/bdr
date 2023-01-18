@@ -160,6 +160,8 @@
 
 #include "miscadmin.h"
 
+#include "access/genam.h"
+#include "access/skey.h"
 #include "access/table.h"
 #include "access/xact.h"
 #include "access/xlog.h"
@@ -1253,7 +1255,6 @@ cancel_conflicting_transactions(void)
 	while (conflict->backendId != InvalidBackendId)
 	{
 		PGPROC	   *pgproc = BackendIdGetProc(conflict->backendId);
-		PGXACT	   *pgxact;
 
 		if (pgproc == NULL)
 		{
@@ -1262,10 +1263,8 @@ cancel_conflicting_transactions(void)
 			continue;
 		}
 
-		pgxact = &ProcGlobal->allPgXact[pgproc->pgprocno];
-
 		/* Skip the transactions that didn't do any writes. */
-		if (!TransactionIdIsValid(pgxact->xid))
+		if (!TransactionIdIsValid(pgproc->xid))
 		{
 			conflict++;
 			continue;
