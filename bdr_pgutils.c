@@ -41,8 +41,8 @@
  * Start function taken from src/common/exec.c
  */
 
-static int	validate_exec(const char *path);
-static char *pipe_read_line(char *cmd, char *line, int maxsize);
+static int	bdr_validate_exec(const char *path);
+static char *bdr_pipe_read_line(char *cmd, char *line, int maxsize);
 
 /*
  * validate_exec -- validate "path" as an executable file
@@ -52,7 +52,7 @@ static char *pipe_read_line(char *cmd, char *line, int maxsize);
  *		  -2 if the file is otherwise valid but cannot be read.
  */
 static int
-validate_exec(const char *path)
+bdr_validate_exec(const char *path)
 {
 	struct stat buf;
 	int			is_r;
@@ -124,12 +124,12 @@ bdr_find_other_exec(const char *argv0, const char *target,
 	snprintf(retpath + strlen(retpath), MAXPGPATH - strlen(retpath),
 			 "/%s%s", target, EXE);
 
-	if (validate_exec(retpath) != 0)
+	if (bdr_validate_exec(retpath) != 0)
 		return -1;
 
 	snprintf(cmd, sizeof(cmd), "\"%s\" -V", retpath);
 
-	if (!pipe_read_line(cmd, line, sizeof(line)))
+	if (!bdr_pipe_read_line(cmd, line, sizeof(line)))
 		return -1;
 
 	if (sscanf(line, "%*s %*s %2d.%2d", &pre_dot, &post_dot) != 2)
@@ -152,7 +152,7 @@ bdr_find_other_exec(const char *argv0, const char *target,
  * is all we need.
  */
 static char *
-pipe_read_line(char *cmd, char *line, int maxsize)
+bdr_pipe_read_line(char *cmd, char *line, int maxsize)
 {
 #ifndef WIN32
 	FILE	   *pgver;
