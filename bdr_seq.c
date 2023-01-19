@@ -83,6 +83,7 @@ static BdrSequencerControl *BdrSequencerCtl = NULL;
 static size_t bdr_seq_nsequencers = 0;
 
 static shmem_startup_hook_type prev_shmem_startup_hook = NULL;
+static shmem_request_hook_type prev_shmem_request_hook = NULL;
 
 static bool bdr_seq_pending_wakeup = false;
 
@@ -461,6 +462,15 @@ bdr_sequencer_shmem_startup(void)
 	on_shmem_exit(bdr_sequencer_shmem_shutdown, (Datum) 0);
 }
 
+static void
+bdr_sequencer_shmem_request(void)
+{
+	if (prev_shmem_request_hook)
+		prev_shmem_request_hook();
+
+	RequestAddinShmemSpace(bdr_sequencer_shmem_size());
+}
+
 void
 bdr_sequencer_shmem_init(int sequencers)
 {
@@ -468,7 +478,8 @@ bdr_sequencer_shmem_init(int sequencers)
 
 	bdr_seq_nsequencers = sequencers;
 
-	RequestAddinShmemSpace(bdr_sequencer_shmem_size());
+	prev_shmem_request_hook = shmem_request_hook;
+	shmem_request_hook = bdr_sequencer_shmem_request;
 
 	prev_shmem_startup_hook = shmem_startup_hook;
 	shmem_startup_hook = bdr_sequencer_shmem_startup;

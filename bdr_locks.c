@@ -317,6 +317,8 @@ static BdrLocksCtl *bdr_locks_ctl;
 /* shmem init hook to chain to on startup, if any */
 static shmem_startup_hook_type prev_shmem_startup_hook = NULL;
 
+static shmem_request_hook_type prev_shmem_request_hook = NULL;
+
 /* this database's state */
 static BdrLocksDBState *bdr_my_locks_database = NULL;
 
@@ -364,6 +366,15 @@ bdr_locks_shmem_startup(void)
 	LWLockRelease(AddinShmemInitLock);
 }
 
+static void
+bdr_locks_shmem_request(void)
+{
+	if (prev_shmem_request_hook)
+		prev_shmem_request_hook();
+
+	RequestAddinShmemSpace(bdr_locks_shmem_size());
+}
+
 /* Needs to be called from a shared_preload_library _PG_init() */
 void
 bdr_locks_shmem_init()
@@ -373,7 +384,9 @@ bdr_locks_shmem_init()
 
 	bdr_locks_ctl = NULL;
 
-	RequestAddinShmemSpace(bdr_locks_shmem_size());
+	prev_shmem_request_hook = shmem_request_hook;
+	shmem_request_hook = bdr_locks_shmem_request;
+
 	RequestNamedLWLockTranche("bdr_locks", 1);
 
 	prev_shmem_startup_hook = shmem_startup_hook;

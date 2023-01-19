@@ -93,6 +93,7 @@ static Size bdr_count_nnodes = 0;
 static int	MyCountOffsetIdx = -1;
 
 static shmem_startup_hook_type prev_shmem_startup_hook = NULL;
+static shmem_request_hook_type prev_shmem_request_hook = NULL;
 
 static void bdr_count_shmem_startup(void);
 static void bdr_count_shmem_shutdown(int code, Datum arg);
@@ -118,6 +119,15 @@ bdr_count_shmem_size(void)
 	return size;
 }
 
+static void
+bdr_count_shmem_request(void)
+{
+	if (prev_shmem_request_hook)
+		prev_shmem_request_hook();
+
+	RequestAddinShmemSpace(bdr_count_shmem_size());
+}
+
 void
 bdr_count_shmem_init(int nnodes)
 {
@@ -126,7 +136,8 @@ bdr_count_shmem_init(int nnodes)
 	Assert(nnodes >= 0);
 	bdr_count_nnodes = (Size)nnodes;
 
-	RequestAddinShmemSpace(bdr_count_shmem_size());
+	prev_shmem_request_hook = shmem_request_hook;
+	shmem_request_hook = bdr_count_shmem_request;
 	/* lock for slot acquiration */
 	RequestNamedLWLockTranche("bdr_count", 1);
 

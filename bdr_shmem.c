@@ -43,6 +43,8 @@ static uint16 bdr_worker_generation;
 /* shmem init hook to chain to on startup, if any */
 static shmem_startup_hook_type prev_shmem_startup_hook = NULL;
 
+static shmem_request_hook_type prev_shmem_request_hook = NULL;
+
 static void bdr_worker_shmem_init(void);
 static void bdr_worker_shmem_startup(void);
 
@@ -97,6 +99,15 @@ bdr_worker_shmem_size()
 	return size;
 }
 
+static void
+bdr_worker_shmem_request(void)
+{
+	if (prev_shmem_request_hook)
+		prev_shmem_request_hook();
+
+	RequestAddinShmemSpace(bdr_worker_shmem_size());
+}
+
 /*
  * Allocate a shared memory segment big enough to hold bdr_max_workers entries
  * in the array of BDR worker info structs (BdrApplyWorker).
@@ -119,7 +130,8 @@ bdr_worker_shmem_init(void)
 	bdr_worker_generation = 1;
 
 	/* Allocate enough shmem for the worker limit ... */
-	RequestAddinShmemSpace(bdr_worker_shmem_size());
+	prev_shmem_request_hook = shmem_request_hook;
+	shmem_request_hook = bdr_worker_shmem_request;
 
 	/*
 	 * We'll need to be able to take exclusive locks so only one per-db backend
