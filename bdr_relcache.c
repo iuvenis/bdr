@@ -22,6 +22,8 @@
 
 #include "catalog/pg_class.h"
 
+#include "common/hashfn.h"
+
 #include "commands/seclabel.h"
 
 #include "utils/builtins.h"

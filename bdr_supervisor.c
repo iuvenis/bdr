@@ -18,6 +18,7 @@
 #include "miscadmin.h"
 #include "pgstat.h"
 
+#include "access/genam.h"
 #include "access/relscan.h"
 #include "access/skey.h"
 #include "access/table.h"
