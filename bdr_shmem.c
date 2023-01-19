@@ -106,6 +106,13 @@ bdr_worker_shmem_request(void)
 		prev_shmem_request_hook();
 
 	RequestAddinShmemSpace(bdr_worker_shmem_size());
+
+	/*
+	 * We'll need to be able to take exclusive locks so only one per-db backend
+	 * tries to allocate or free blocks from this array at once.  There won't
+	 * be enough contention to make anything fancier worth doing.
+	 */
+	RequestNamedLWLockTranche("bdr_shmem", 1);
 }
 
 /*
@@ -132,13 +139,6 @@ bdr_worker_shmem_init(void)
 	/* Allocate enough shmem for the worker limit ... */
 	prev_shmem_request_hook = shmem_request_hook;
 	shmem_request_hook = bdr_worker_shmem_request;
-
-	/*
-	 * We'll need to be able to take exclusive locks so only one per-db backend
-	 * tries to allocate or free blocks from this array at once.  There won't
-	 * be enough contention to make anything fancier worth doing.
-	 */
-	RequestNamedLWLockTranche("bdr_shmem", 1);
 
 	/*
 	 * Whether this is a first startup or crash recovery, we'll be re-initing

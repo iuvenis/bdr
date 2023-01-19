@@ -373,6 +373,7 @@ bdr_locks_shmem_request(void)
 		prev_shmem_request_hook();
 
 	RequestAddinShmemSpace(bdr_locks_shmem_size());
+	RequestNamedLWLockTranche("bdr_locks", 1);
 }
 
 /* Needs to be called from a shared_preload_library _PG_init() */
@@ -386,8 +387,6 @@ bdr_locks_shmem_init()
 
 	prev_shmem_request_hook = shmem_request_hook;
 	shmem_request_hook = bdr_locks_shmem_request;
-
-	RequestNamedLWLockTranche("bdr_locks", 1);
 
 	prev_shmem_startup_hook = shmem_startup_hook;
 	shmem_startup_hook = bdr_locks_shmem_startup;

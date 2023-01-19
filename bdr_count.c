@@ -126,6 +126,8 @@ bdr_count_shmem_request(void)
 		prev_shmem_request_hook();
 
 	RequestAddinShmemSpace(bdr_count_shmem_size());
+	/* lock for slot acquiration */
+	RequestNamedLWLockTranche("bdr_count", 1);
 }
 
 void
@@ -138,8 +140,6 @@ bdr_count_shmem_init(int nnodes)
 
 	prev_shmem_request_hook = shmem_request_hook;
 	shmem_request_hook = bdr_count_shmem_request;
-	/* lock for slot acquiration */
-	RequestNamedLWLockTranche("bdr_count", 1);
 
 	prev_shmem_startup_hook = shmem_startup_hook;
 	shmem_startup_hook = bdr_count_shmem_startup;
