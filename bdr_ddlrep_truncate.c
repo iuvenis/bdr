@@ -203,7 +203,7 @@ bdr_truncate_trigger_add(PG_FUNCTION_ARGS)
 
 	trigdata = (EventTriggerData *) fcinfo->context;
 
-	if (strcmp(trigdata->tag, "CREATE TABLE") == 0 &&
+	if (trigdata->tag == CMDTAG_CREATE_TABLE &&
 		IsA(trigdata->parsetree, CreateStmt))
 	{
 		CreateStmt *stmt = (CreateStmt *)trigdata->parsetree;
