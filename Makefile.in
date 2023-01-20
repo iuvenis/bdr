@@ -52,17 +52,13 @@ DOCS = README.bdr bdr.conf.sample
 SCRIPTS_built = \
 	scripts/bdr_initial_load \
 	bdr_init_copy \
-	bdr_dump
+	bdr_dump \
+	bdr_resetxlog
 all: \
 	scripts/bdr_initial_load \
 	bdr_init_copy \
-	bdr_dump
-
-# We can't use Makefile.global's MAJORVERSION here yet
-ifneq ($(BDR_PG_MAJORVERSION),94)
-SCRIPTS_built += bdr_resetxlog
-all: bdr_resetxlog
-endif
+	bdr_dump \
+	bdr_resetxlog
 
 # When in development add -Werror
 PG_CPPFLAGS = -std=gnu89 -I$(srcdir)/$(BDR_PGVERCOMPAT_INCDIR) -I$(libpq_srcdir) -Wall -Wmissing-prototypes -Wmissing-declarations $(EXTRA_CFLAGS)
@@ -179,20 +175,11 @@ DUMPOBJS = $(BDR_DUMP_DIR)/pg_dump.o \
 	$(BDR_DUMP_DIR)/pg_backup_utils.o \
 	$(BDR_DUMP_DIR)/parallel.o \
 	$(BDR_DUMP_DIR)/compress_io.o \
-	$(BDR_DUMP_DIR)/dumputils.o
+	$(BDR_DUMP_DIR)/dumputils.o \
+	$(BDR_DUMP_DIR)/string_utils.o
 
-BDR_DUMP_DIR := pg_dump$(BDR_PG_MAJORVERSION)
-ifeq ($(MAJORVERSION),9.6)
-BDR_DUMP_LIBS := -lpgfeutils
-DUMPOBJS += $(BDR_DUMP_DIR)/keywords.o
-else ifeq ($(MAJORVERSION),9.4)
-BDR_DUMP_LIBS :=
-DUMPOBJS += $(BDR_DUMP_DIR)/keywords.o \
-	$(BDR_DUMP_DIR)/kwlookup.o
-else
+BDR_DUMP_DIR := pg_dump
 BDR_DUMP_LIBS := -lz -lpgfeutils
-DUMPOBJS += $(BDR_DUMP_DIR)/string_utils.o
-endif
 
 RESETXLOG_OBJS := pg_resetxlog/pg_resetwal.o
 RESETXLOG_LIBS := -lpgfeutils
@@ -256,10 +243,7 @@ $(eval $(call genextfile,2.0.3.0,2.0.4.0))
 $(eval $(call genextfile,2.0.4.0,2.0.5.0))
 $(eval $(call genextfile,2.0.5.0,2.0.6.0))
 
-pg_dump_dir:
-	mkdir -p $(BDR_DUMP_DIR)
-
-bdr_dump: pg_dump_dir $(DUMPOBJS)
+bdr_dump: $(DUMPOBJS)
 	$(CC) $(CFLAGS) $(DUMPOBJS) $(libpq_pgport) $(LDFLAGS) $(LDFLAGS_EX) $(BDR_DUMP_LIBS) -o $@$(X)
 
 doc:
@@ -301,18 +285,6 @@ additional-maintainer-clean: clean
 # Disabled because these tests require "wal_level=logical", which
 # typical installcheck users do not have (e.g. buildfarm clients).
 installcheck: ;
-
-ifeq ($(BDR_PG_MAJORVERSION),9.4)
-# We must emulate SCRIPTS_built for Pg 9.4 as PGXS doesn't support it
-install: install-scripts
-install-scripts:
-	$(INSTALL_SCRIPT) $(SCRIPTS_built) '$(DESTDIR)$(bindir)/'
-.PHONY: install-scripts
-installdirs: installdirs-scripts
-installdirs-scripts:
-	$(MKDIR_P) '$(DESTDIR)$(bindir)'
-.PHONY: installdirs-scripts
-endif
 
 check: regresscheck noisolationcheck prove_installcheck
 
