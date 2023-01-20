@@ -31,8 +31,6 @@
 
 #include "bdr_version.h"
 
-#include "pglogical_compat.h"
-
 /* Right now replication_name isn't used; make it easily found for later */
 #define EMPTY_REPLICATION_NAME ""
 
