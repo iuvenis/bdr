@@ -194,24 +194,11 @@ BDR_DUMP_LIBS := -lz -lpgfeutils
 DUMPOBJS += $(BDR_DUMP_DIR)/string_utils.o
 endif
 
-ifneq ($(MAJORVERSION),9.4)
-RESETXLOG_OBJS := pg_resetxlog/$(BDR_PG_MAJORVERSION)/pg_resetwal.o
+RESETXLOG_OBJS := pg_resetxlog/pg_resetwal.o
 RESETXLOG_LIBS := -lpgfeutils
 
-bdr_resetxlog_dir:
-	mkdir -p pg_resetxlog/$(BDR_PG_MAJORVERSION)
-
-.PHONY: bdr_resetxlog_dir
-
-bdr_resetxlog: bdr_resetxlog_dir $(RESETXLOG_OBJS)
+bdr_resetxlog: $(RESETXLOG_OBJS)
 	$(CC) $(CFLAGS) $(RESETXLOG_OBJS) $(libpq_pgport) $(LDFLAGS) $(LDFLAGS_EX) -o $@$(X)
-else
-RESETXLOG_OBJS := 
-RESETXLOG_LIBS :=
-
-bdr_resetxlog:
-	@echo "bdr_resetxlog is not built on 9.4"
-endif
 
 # Ensure Makefiles are up2date (should we move this to Makefile.global?)
 Makefile: Makefile.in config.status configure
