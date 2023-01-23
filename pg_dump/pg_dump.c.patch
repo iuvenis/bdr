@@ -1,0 +1,58 @@
+--- /Users/user/Documents/Repos/postgres/src/bin/pg_dump/pg_dump.c	2022-12-19 18:00:36.000000000 +0100
++++ pg_dump.c	2023-01-23 09:12:59.000000000 +0100
+@@ -383,6 +383,7 @@
+ 		 */
+ 		{"attribute-inserts", no_argument, &dopt.column_inserts, 1},
+ 		{"binary-upgrade", no_argument, &dopt.binary_upgrade, 1},
++		{"bdr-init-node", no_argument, &dopt.bdr_init_node, 1},
+ 		{"column-inserts", no_argument, &dopt.column_inserts, 1},
+ 		{"disable-dollar-quoting", no_argument, &dopt.disable_dollar_quoting, 1},
+ 		{"disable-triggers", no_argument, &dopt.disable_triggers, 1},
+@@ -8646,7 +8647,7 @@
+ bool
+ shouldPrintColumn(const DumpOptions *dopt, const TableInfo *tbinfo, int colno)
+ {
+-	if (dopt->binary_upgrade)
++	if (dopt->binary_upgrade || dopt->bdr_init_node)
+ 		return true;
+ 	if (tbinfo->attisdropped[colno])
+ 		return false;
+@@ -15642,6 +15643,38 @@
+ 			}
+ 		}
+ 
++		/* Some of the binary compatibility is needed for bdr as well. */
++		if (dopt->bdr_init_node && tbinfo->relkind == RELKIND_RELATION)
++		{
++			for (j = 0; j < tbinfo->numatts; j++)
++			{
++				if (tbinfo->attisdropped[j])
++				{
++					appendPQExpBufferStr(q, "\n-- For bdr init, recreate dropped column.\n");
++					appendPQExpBuffer(q, "UPDATE pg_catalog.pg_attribute\n"
++									  "SET attlen = %d, "
++									  "attalign = '%c', attbyval = false\n"
++									  "WHERE attname = ",
++									  tbinfo->attlen[j],
++									  tbinfo->attalign[j]);
++					appendStringLiteralAH(q, tbinfo->attnames[j], fout);
++					appendPQExpBufferStr(q, "\n  AND attrelid = ");
++					appendStringLiteralAH(q, fmtId(tbinfo->dobj.name), fout);
++					appendPQExpBufferStr(q, "::pg_catalog.regclass;\n");
++
++					if (tbinfo->relkind == RELKIND_RELATION)
++						appendPQExpBuffer(q, "ALTER TABLE ONLY %s ",
++										  fmtId(tbinfo->dobj.name));
++					else
++						appendPQExpBuffer(q, "ALTER FOREIGN TABLE %s ",
++										  fmtId(tbinfo->dobj.name));
++
++					appendPQExpBuffer(q, "DROP COLUMN %s;\n",
++									  fmtId(tbinfo->attnames[j]));
++				}
++			}
++		}
++
+ 		/*
+ 		 * In binary_upgrade mode, restore matviews' populated status by
+ 		 * poking pg_class directly.  This is pretty ugly, but we can't use

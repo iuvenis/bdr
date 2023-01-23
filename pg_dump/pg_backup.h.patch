@@ -1,0 +1,10 @@
+--- /Users/user/Documents/Repos/postgres/src/bin/pg_dump/pg_backup.h	2022-12-19 18:00:36.000000000 +0100
++++ pg_backup.h	2023-01-23 08:57:14.000000000 +0100
+@@ -159,6 +159,7 @@
+ 	ConnParams	cparams;
+ 
+ 	int			binary_upgrade;
++	int			bdr_init_node;
+ 
+ 	/* various user-settable parameters */
+ 	bool		schemaOnly;
