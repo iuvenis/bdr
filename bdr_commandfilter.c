@@ -185,8 +185,7 @@ filter_AlterTableStmt(Node *parsetree,
 
 	astmt = transformAlterTableStmt(relid, astmt, queryString, &beforeStmts, &afterStmts);
 	
-	stmts = list_concat(stmts, beforeStmts);
-	stmts = lappend(stmts, (Node *) astmt);
+	stmts = lappend(beforeStmts, (Node *) astmt);
 	stmts = list_concat(stmts, afterStmts);
 
 	foreach(cell, stmts)
@@ -477,7 +476,7 @@ filter_CreateTableAs(Node *parsetree)
 		return;
 
 	if (ispermanent(stmt->into->rel->relpersistence))
-		error_unsupported_command(CreateCommandTag(parsetree));
+		error_unsupported_command(CreateCommandName(parsetree));
 }
 
 static bool
@@ -692,7 +691,7 @@ allowed_on_read_only_node(Node *parsetree, const char **tag)
 		case T_CreateForeignTableStmt:
 		case T_SecLabelStmt:
 		{
-			*tag = CreateCommandTag(parsetree);
+			*tag = CreateCommandName(parsetree);
 			return statement_affects_only_nonpermanent(parsetree);
 		}
 		/* Pg checks this in DoCopy not check_xact_readonly */
@@ -789,7 +788,7 @@ bdr_commandfilter(PlannedStmt *pstmt,
 	/* take strongest lock by default. */
 	BDRLockType	lock_type = BDR_LOCK_WRITE;
 
-        elog(DEBUG2, "processing %s: %s in statement %s", context == PROCESS_UTILITY_TOPLEVEL ? "toplevel" : "query", CreateCommandTag(parsetree), queryString);
+        elog(DEBUG2, "processing %s: %s in statement %s", context == PROCESS_UTILITY_TOPLEVEL ? "toplevel" : "query", CreateCommandName(parsetree), queryString);
 
 	/* don't filter in single user mode */
 	if (!IsUnderPostmaster)
@@ -1052,7 +1051,7 @@ bdr_commandfilter(PlannedStmt *pstmt,
 
 		case T_AlterDomainStmt:
 			/* XXX: we could support this */
-			error_unsupported_command(CreateCommandTag(parsetree));
+			error_unsupported_command(CreateCommandName(parsetree));
 			break;
 
 		case T_DefineStmt:
@@ -1067,7 +1066,7 @@ bdr_commandfilter(PlannedStmt *pstmt,
 						break;
 
 					default:
-						error_unsupported_command(CreateCommandTag(parsetree));
+						error_unsupported_command(CreateCommandName(parsetree));
 						break;
 				}
 
@@ -1125,11 +1124,11 @@ bdr_commandfilter(PlannedStmt *pstmt,
 
 		case T_AlterExtensionStmt:
 			/* XXX: we could support some of these */
-			error_unsupported_command(CreateCommandTag(parsetree));
+			error_unsupported_command(CreateCommandName(parsetree));
 			break;
 
 		case T_AlterExtensionContentsStmt:
-			error_unsupported_command(CreateCommandTag(parsetree));
+			error_unsupported_command(CreateCommandName(parsetree));
 			break;
 
 		case T_CreateFdwStmt:
@@ -1140,7 +1139,7 @@ bdr_commandfilter(PlannedStmt *pstmt,
 		case T_AlterUserMappingStmt:
 		case T_DropUserMappingStmt:
 			/* XXX: we should probably support all of these at some point */
-			error_unsupported_command(CreateCommandTag(parsetree));
+			error_unsupported_command(CreateCommandName(parsetree));
 			break;
 
 		case T_CompositeTypeStmt:	/* CREATE TYPE (composite) */
@@ -1173,14 +1172,14 @@ bdr_commandfilter(PlannedStmt *pstmt,
 
 		case T_RefreshMatViewStmt:
 			/* XXX: might make sense to support or not */
-			error_unsupported_command(CreateCommandTag(parsetree));
+			error_unsupported_command(CreateCommandName(parsetree));
 			break;
 
 		case T_CreateTrigStmt:
 			break;
 
 		case T_CreatePLangStmt:
-			error_unsupported_command(CreateCommandTag(parsetree));
+			error_unsupported_command(CreateCommandName(parsetree));
 			break;
 
 		case T_CreateDomainStmt:
@@ -1188,19 +1187,19 @@ bdr_commandfilter(PlannedStmt *pstmt,
 			break;
 
 		case T_CreateConversionStmt:
-			error_unsupported_command(CreateCommandTag(parsetree));
+			error_unsupported_command(CreateCommandName(parsetree));
 			break;
 
 		case T_CreateCastStmt:
 		case T_CreateOpClassStmt:
 		case T_CreateOpFamilyStmt:
 		case T_AlterOpFamilyStmt:
-			error_unsupported_command(CreateCommandTag(parsetree));
+			error_unsupported_command(CreateCommandName(parsetree));
 			break;
 
 		case T_AlterTSDictionaryStmt:
 		case T_AlterTSConfigurationStmt:
-			error_unsupported_command(CreateCommandTag(parsetree));
+			error_unsupported_command(CreateCommandName(parsetree));
 			break;
 
 		case T_DropStmt:
@@ -1242,7 +1241,7 @@ bdr_commandfilter(PlannedStmt *pstmt,
 				case OBJECT_CONVERSION:
 				case OBJECT_OPCLASS:
 				case OBJECT_OPFAMILY:
-					error_unsupported_command(CreateCommandTag(parsetree));
+					error_unsupported_command(CreateCommandName(parsetree));
 					break;
 
 				default:
@@ -1252,7 +1251,7 @@ bdr_commandfilter(PlannedStmt *pstmt,
 			break;
 
 		case T_AlterObjectSchemaStmt:
-			error_unsupported_command(CreateCommandTag(parsetree));
+			error_unsupported_command(CreateCommandName(parsetree));
 			break;
 
 		case T_AlterOwnerStmt:
@@ -1260,7 +1259,7 @@ bdr_commandfilter(PlannedStmt *pstmt,
 			break;
 
 		case T_DropOwnedStmt:
-			error_unsupported_command(CreateCommandTag(parsetree));
+			error_unsupported_command(CreateCommandName(parsetree));
 			break;
 
 		case T_AlterDefaultPrivilegesStmt:
@@ -1275,7 +1274,7 @@ bdr_commandfilter(PlannedStmt *pstmt,
 				if (sstmt->provider == NULL ||
 					strcmp(sstmt->provider, "bdr") == 0)
 					break;
-				error_unsupported_command(CreateCommandTag(parsetree));
+				error_unsupported_command(CreateCommandName(parsetree));
 				break;
 			}
 		
@@ -1337,7 +1336,7 @@ bdr_commandfilter(PlannedStmt *pstmt,
                                          errdetail("BDR2 does not support transparent DDL replication for "
                                                            "multi-statement strings or function bodies containing DDL "
                                                            "commands. Problem statement has tag [%s] in SQL string: %s",
-                                                           CreateCommandTag(parsetree), queryString),
+                                                           CreateCommandName(parsetree), queryString),
                                          errhint("Use bdr.bdr_replicate_ddl_command(...) instead")));
 
 		Assert(bdr_ddl_nestlevel >= 0);
@@ -1358,7 +1357,7 @@ bdr_commandfilter(PlannedStmt *pstmt,
 		//			 errhint("Use bdr.bdr_replicate_ddl_command(...)")));
 
                 if (PG_VERSION_NUM >= 90600)
-                        bdr_capture_ddl(parsetree, queryString, context, params, dest, CreateCommandTag(parsetree));
+                        bdr_capture_ddl(parsetree, queryString, context, params, dest, CreateCommandName(parsetree));
 
 		elog(DEBUG3, "DDLREP: Entering level %d DDL block. Toplevel command is %s", bdr_ddl_nestlevel, queryString);
 		incremented_nestlevel = true;

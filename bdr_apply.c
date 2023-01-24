@@ -1571,7 +1571,7 @@ bdr_execute_ddl_command(char *cmdstr, char *perpetrator, char *search_path,
 		List	   *plantree_list;
 		List	   *querytree_list;
 		RawStmt	   *command = lfirst_node(RawStmt, command_i);
-		const char *commandTag;
+		CommandTag commandTag;
 		Portal		portal;
 		DestReceiver *receiver;
 

@@ -427,7 +427,7 @@ CreateWritableStmtTag(PlannedStmt *plannedstmt)
 	if (plannedstmt->commandType == CMD_SELECT)
 		return "DML"; /* SELECT INTO/WCTE */
 
-	return CreateCommandTag((Node *) plannedstmt);
+	return CreateCommandName((Node *) plannedstmt);
 }
 
 /*

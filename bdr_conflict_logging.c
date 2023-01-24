@@ -228,7 +228,6 @@ void
 tuple_to_stringinfo(StringInfo s, TupleDesc tupdesc, HeapTuple tuple)
 {
 	int			natt;
-	Oid			oid;
 
 	/* print all columns individually */
 	for (natt = 0; natt < tupdesc->natts; natt++)

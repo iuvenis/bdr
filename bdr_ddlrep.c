@@ -249,7 +249,7 @@ bdr_capture_ddl(Node *parsetree, const char *queryString,
        }
 
        if (tag == NULL)
-               tag = CreateCommandTag(parsetree);
+               tag = CreateCommandName(parsetree);
 
        bdr_queue_ddl_command(tag, queryString, si.data);
 
