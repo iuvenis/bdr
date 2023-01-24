@@ -1953,7 +1953,7 @@ process_queued_drop(HeapTuple cmdtup)
 			}
 		}
 
-		addr = get_object_address(objtype, castNode(Node, objnames), &objrel,
+		addr = get_object_address(objtype, ((Node *) objnames), &objrel,
 								  AccessExclusiveLock, false);
 
 		/* unsupported object? */

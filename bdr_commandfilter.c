@@ -745,7 +745,7 @@ prevent_drop_extension_bdr(DropStmt *stmt)
 
 		/* Get an ObjectAddress for the object. */
 		address = get_object_address(stmt->removeType,
-									 castNode(Node, objname),
+									 ((Node *) objname),
 									 &relation,
 									 AccessExclusiveLock,
 									 stmt->missing_ok);
