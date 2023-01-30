@@ -101,6 +101,7 @@ bdr_register_perdb_worker(const char * dbname)
 	bgw.bgw_notify_pid = 0;
 	snprintf(bgw.bgw_name, BGW_MAXLEN,
 			 "bdr db: %s", dbname);
+	snprintf(bgw.bgw_type, BGW_MAXLEN, "bdr perdb worker");
 
 	/*
 	 * The main arg is composed of two uint16 parts - the worker
@@ -482,6 +483,7 @@ bdr_supervisor_register()
 	bgw.bgw_notify_pid = 0;
 	snprintf(bgw.bgw_name, BGW_MAXLEN,
 			 "bdr supervisor");
+	snprintf(bgw.bgw_type, BGW_MAXLEN, "bdr supervisor");
 	bgw.bgw_main_arg = Int32GetDatum(0); /* unused */
 
 	RegisterBackgroundWorker(&bgw);

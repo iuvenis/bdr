@@ -699,6 +699,7 @@ bdr_maintain_db_workers(void)
 				 "bdr apply %s to %s",
 				 bdr_nodeid_name(&target, true),
 				 bdr_nodeid_name(&myid, true));
+		snprintf(bgw.bgw_type, BGW_MAXLEN, "bdr apply worker");
 
 		/* Allocate a new shmem slot for this apply worker */
 		worker = bdr_worker_shmem_alloc(BDR_WORKER_APPLY, &slot);
