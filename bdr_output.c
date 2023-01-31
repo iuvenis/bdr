@@ -51,6 +51,7 @@
 #include "replication/walsender_private.h"
 
 #include "storage/fd.h"
+#include "storage/lockdefs.h"
 #include "storage/proc.h"
 
 #include "utils/builtins.h"
@@ -867,7 +868,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	MemoryContext old;
 	BDRRelation *bdr_relation;
 
-	bdr_relation = bdr_heap_open(RelationGetRelid(relation), NoLock);
+	bdr_relation = bdr_heap_open(RelationGetRelid(relation), AccessShareLock);
 
 	data = ctx->output_plugin_private;
 

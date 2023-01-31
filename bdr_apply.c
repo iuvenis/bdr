@@ -53,6 +53,7 @@
 
 #include "storage/ipc.h"
 #include "storage/lmgr.h"
+#include "storage/lockdefs.h"
 #include "storage/lwlock.h"
 #include "storage/proc.h"
 
@@ -1652,7 +1653,7 @@ process_queued_ddl_command(HeapTuple cmdtup, bool tx_just_started)
 	 */
 	oldcontext = MemoryContextSwitchTo(MessageContext);
 
-	cmdsrel = table_open(QueuedDDLCommandsRelid, NoLock);
+	cmdsrel = table_open(QueuedDDLCommandsRelid, AccessShareLock);
 
 	/* fetch the perpetrator user identifier */
 	datum = heap_getattr(cmdtup, 3,
@@ -2264,7 +2265,7 @@ read_rel(StringInfo s, LOCKMODE mode, struct ActionErrCallbackArg *cbarg)
 	if (isBdrGlobalSeqRelId(relid))
 		bdr_sequencer_lock();
 
-	return bdr_heap_open(relid, NoLock);
+	return bdr_heap_open(relid, AccessShareLock);
 }
 
 /*
