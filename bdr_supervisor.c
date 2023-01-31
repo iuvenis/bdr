@@ -399,6 +399,7 @@ bdr_supervisor_worker_main(Datum main_arg)
 
 	LWLockAcquire(BdrWorkerCtl->lock, LW_EXCLUSIVE);
 	BdrWorkerCtl->supervisor_latch = &MyProc->procLatch;
+	ResetLatch(&MyProc->procLatch);
 	LWLockRelease(BdrWorkerCtl->lock);
 
 	elog(DEBUG1, "BDR supervisor connected to DB "BDR_SUPERVISOR_DBNAME);

@@ -834,6 +834,7 @@ bdr_perdb_worker_main(Datum main_arg)
 	 */
 	LWLockAcquire(BdrWorkerCtl->lock, LW_EXCLUSIVE);
 	perdb->proclatch = &MyProc->procLatch;
+	ResetLatch(&MyProc->procLatch);
 	perdb->database_oid = MyDatabaseId;
 	LWLockRelease(BdrWorkerCtl->lock);
 
