@@ -899,7 +899,7 @@ _PG_init(void)
 							   PGC_BACKEND,
 							   0, NULL, NULL, NULL);
 
-	EmitWarningsOnPlaceholders("bdr");
+	MarkGUCPrefixReserved("bdr");
 
 	bdr_label_init();
 
