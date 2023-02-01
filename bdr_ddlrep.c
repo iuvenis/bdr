@@ -51,6 +51,7 @@ void
 bdr_queue_ddl_command(const char *command_tag, const char *command, const char *search_path)
 {
 	EState		   *estate;
+	ResultRelInfo	   *relinfo;
 	TupleTableSlot *slot;
 	RangeVar	   *rv;
 	Relation		queuedcmds;
@@ -70,8 +71,9 @@ bdr_queue_ddl_command(const char *command_tag, const char *command, const char *
 	rv = makeRangeVar("bdr", "bdr_queued_commands", -1);
 	queuedcmds = table_openrv(rv, RowExclusiveLock);
 	slot = MakeSingleTupleTableSlot(RelationGetDescr(queuedcmds), &TTSOpsHeapTuple);
-	estate = bdr_create_rel_estate(queuedcmds);
-	ExecOpenIndices(estate->es_result_relations[0], false);
+	estate = CreateExecutorState();
+	relinfo = bdr_create_result_rel_info(queuedcmds);
+	ExecOpenIndices(relinfo, false);
 
 	/* lsn, queued_at, perpetrator, command_tag, command */
 	MemSet(nulls, 0, sizeof(nulls));
@@ -85,9 +87,9 @@ bdr_queue_ddl_command(const char *command_tag, const char *command, const char *
 	newtup = heap_form_tuple(RelationGetDescr(queuedcmds), values, nulls);
 	simple_heap_insert(queuedcmds, newtup);
 	ExecStoreHeapTuple(newtup, slot, false);
-	UserTableUpdateOpenIndexes(estate, slot, false);
+	UserTableUpdateOpenIndexes(estate, relinfo, slot, false);
 
-	ExecCloseIndices(estate->es_result_relations[0]);
+	ExecCloseIndices(relinfo);
 	ExecDropSingleTupleTableSlot(slot);
 	table_close(queuedcmds, RowExclusiveLock);
 }

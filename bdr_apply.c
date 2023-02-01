@@ -640,7 +640,7 @@ process_remote_insert(StringInfo s)
 		elog(ERROR, "expected new tuple but got %d",
 			 action);
 
-	estate = bdr_create_rel_estate(rel->rel);
+	estate = CreateExecutorState();
 	newslot = ExecInitExtraTupleSlot(estate, NULL, &TTSOpsHeapTuple);
 	oldslot = ExecInitExtraTupleSlot(estate, NULL, &TTSOpsHeapTuple);
 	ExecSetSlotDescriptor(newslot, RelationGetDescr(rel->rel));
@@ -666,7 +666,7 @@ process_remote_insert(StringInfo s)
 	/*
 	 * Search for conflicting tuples.
 	 */
-        relinfo = estate->es_result_relations[0];
+        relinfo = bdr_create_result_rel_info(rel->rel);
 	ExecOpenIndices(relinfo, false);
 	index_keys = palloc0(relinfo->ri_NumIndices * sizeof(ScanKeyData*));
 	conflicts = palloc0(relinfo->ri_NumIndices * sizeof(ItemPointerData));
@@ -792,7 +792,7 @@ process_remote_insert(StringInfo s)
 							   &oldhslot->tuple->t_self,
 							   newhslot->tuple);
 			/* races will be resolved by abort/retry */
-			UserTableUpdateOpenIndexes(estate, newslot, true);
+			UserTableUpdateOpenIndexes(estate, relinfo, newslot, true);
 
 			bdr_count_insert();
 		}
@@ -807,7 +807,7 @@ process_remote_insert(StringInfo s)
 	else
 	{
 		simple_heap_insert(rel->rel, newhslot->tuple);
-		UserTableUpdateOpenIndexes(estate, newslot, false);
+		UserTableUpdateOpenIndexes(estate, relinfo, newslot, false);
 		bdr_count_insert();
 	}
 
@@ -934,7 +934,7 @@ process_remote_update(StringInfo s)
 		elog(ERROR, "expected action 'N' or 'K', got %c",
 			 action);
 
-	estate = bdr_create_rel_estate(rel->rel);
+	estate = CreateExecutorState();
 	oldslot = ExecInitExtraTupleSlot(estate, NULL, &TTSOpsHeapTuple);
 	ExecSetSlotDescriptor(oldslot, RelationGetDescr(rel->rel));
 	newslot = ExecInitExtraTupleSlot(estate, NULL, &TTSOpsHeapTuple);
@@ -1047,6 +1047,7 @@ process_remote_update(StringInfo s)
 
 		if (apply_update)
 		{
+			ResultRelInfo *relinfo = bdr_create_result_rel_info(rel->rel);
 			/*
 			 * User specified conflict handler provided a new tuple; form it to
 			 * a bdr tuple.
@@ -1060,7 +1061,7 @@ process_remote_update(StringInfo s)
 			}
 
 			simple_heap_update(rel->rel, &oldhslot->tuple->t_self, newhslot->tuple);
-			UserTableUpdateIndexes(estate, newslot, true);
+			UserTableUpdateIndexes(estate, relinfo, newslot, true);
 			bdr_count_update();
 		}
 
@@ -1116,13 +1117,14 @@ process_remote_update(StringInfo s)
 		 */
 		if (resolution == BdrConflictResolution_ConflictTriggerReturnedTuple)
 		{
+			ResultRelInfo *relinfo = bdr_create_result_rel_info(rel->rel);
 #ifdef VERBOSE_UPDATE
 			log_tuple("USER tuple:%s", RelationGetDescr(rel->rel), user_tuple);
 #endif
 			ExecStoreHeapTuple(user_tuple, newslot, true);
 
 			simple_heap_insert(rel->rel, newhslot->tuple);
-			UserTableUpdateOpenIndexes(estate, newslot, false);
+			UserTableUpdateOpenIndexes(estate, relinfo, newslot, false);
 		}
 
 		bdr_conflict_log_table(apply_conflict);
@@ -1200,7 +1202,7 @@ process_remote_delete(StringInfo s)
 		return;
 	}
 
-	estate = bdr_create_rel_estate(rel->rel);
+	estate = CreateExecutorState();
 	oldslot = ExecInitExtraTupleSlot(estate, NULL, &TTSOpsHeapTuple);
 	ExecSetSlotDescriptor(oldslot, RelationGetDescr(rel->rel));
 

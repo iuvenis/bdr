@@ -468,12 +468,11 @@ extern bool bdr_fetch_sysid_via_node_id_ifexists(RepOriginId node_id, BDRNodeId 
 extern RepOriginId bdr_fetch_node_id_via_sysid(const BDRNodeId * const node);
 
 /* Index maintenance, heap access, etc */
-extern struct EState * bdr_create_rel_estate(Relation rel);
 extern ResultRelInfo * bdr_create_result_rel_info(Relation rel);
-extern void UserTableUpdateIndexes(struct EState *estate,
+extern void UserTableUpdateIndexes(struct EState *estate, struct ResultRelInfo *resultRelInfo,
 								   struct TupleTableSlot *slot,
 								   bool update);
-extern void UserTableUpdateOpenIndexes(struct EState *estate,
+extern void UserTableUpdateOpenIndexes(struct EState *estate, struct ResultRelInfo *resultRelInfo,
 									   struct TupleTableSlot *slot,
 									   bool update);
 extern void build_index_scan_keys(ResultRelInfo *relInfo,

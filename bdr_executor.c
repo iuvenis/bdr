@@ -64,20 +64,6 @@ static bool bdr_always_allow_writes = false;
 PGDLLEXPORT Datum bdr_node_set_read_only(PG_FUNCTION_ARGS);
 PG_FUNCTION_INFO_V1(bdr_node_set_read_only);
 
-EState *
-bdr_create_rel_estate(Relation rel)
-{
-	EState	   *estate;
-	ResultRelInfo *resultRelInfo;
-
-	estate = CreateExecutorState();
-
-	resultRelInfo = bdr_create_result_rel_info(rel);
-	estate->es_result_relations = &resultRelInfo;
-
-	return estate;
-}
-
 
 ResultRelInfo *
 bdr_create_result_rel_info(Relation rel)
@@ -90,19 +76,19 @@ bdr_create_result_rel_info(Relation rel)
 }
 
 void
-UserTableUpdateIndexes(EState *estate, TupleTableSlot *slot, bool update)
+UserTableUpdateIndexes(EState *estate, ResultRelInfo *resultRelInfo, TupleTableSlot *slot, bool update)
 {
 	/* HOT update does not require index inserts */
 	if (HeapTupleIsHeapOnly(((HeapTupleTableSlot *) slot)->tuple))
 		return;
 
-	ExecOpenIndices(estate->es_result_relations[0], false);
-	UserTableUpdateOpenIndexes(estate, slot, update);
-	ExecCloseIndices(estate->es_result_relations[0]);
+	ExecOpenIndices(resultRelInfo, false);
+	UserTableUpdateOpenIndexes(estate, resultRelInfo, slot, update);
+	ExecCloseIndices(resultRelInfo);
 }
 
 void
-UserTableUpdateOpenIndexes(EState *estate, TupleTableSlot *slot, bool update)
+UserTableUpdateOpenIndexes(EState *estate, ResultRelInfo *resultRelInfo, TupleTableSlot *slot, bool update)
 {
 	List	   *recheckIndexes = NIL;
 	HeapTuple   tuple = ((HeapTupleTableSlot *) slot)->tuple;
@@ -111,9 +97,9 @@ UserTableUpdateOpenIndexes(EState *estate, TupleTableSlot *slot, bool update)
 	if (HeapTupleIsHeapOnly(tuple))
 		return;
 
-	if (estate->es_result_relations[0]->ri_NumIndices > 0)
+	if (resultRelInfo->ri_NumIndices > 0)
 	{
-		recheckIndexes = ExecInsertIndexTuples(estate->es_result_relations[0],
+		recheckIndexes = ExecInsertIndexTuples(resultRelInfo,
 											   		 slot,
 											   		 estate,
 													 update,

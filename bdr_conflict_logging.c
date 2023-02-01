@@ -556,7 +556,7 @@ bdr_conflict_log_table(BdrApplyConflict *conflict)
 	log_rel = table_open(BdrConflictHistoryRelId, RowExclusiveLock);
 
 	/* Prepare executor state for index updates */
-	log_estate = bdr_create_rel_estate(log_rel);
+	log_estate = CreateExecutorState();
 	log_slot = ExecInitExtraTupleSlot(log_estate, NULL, &TTSOpsHeapTuple);
 	ExecSetSlotDescriptor(log_slot, RelationGetDescr(log_rel));
 	/* Construct the tuple and insert it */
@@ -564,7 +564,7 @@ bdr_conflict_log_table(BdrApplyConflict *conflict)
 	ExecStoreHeapTuple(log_tup, log_slot, true);
 	simple_heap_insert(log_rel, ((HeapTupleTableSlot *) log_slot)->tuple);
 	/* Then do any index maintanence required */
-	UserTableUpdateIndexes(log_estate, log_slot, false);
+	UserTableUpdateIndexes(log_estate, bdr_create_result_rel_info(log_rel), log_slot, false);
 	/* and finish up */
 	table_close(log_rel, RowExclusiveLock);
 	ExecResetTupleTable(log_estate->es_tupleTable, true);
