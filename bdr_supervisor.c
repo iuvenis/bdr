@@ -344,6 +344,8 @@ bdr_supervisor_worker_main(Datum main_arg)
 	Assert(DatumGetInt32(main_arg) == 0);
 	Assert(IsBackgroundWorker);
 
+	ResetLatch(&MyProc->procLatch);
+
 	pqsignal(SIGHUP, bdr_sighup);
 	pqsignal(SIGTERM, bdr_sigterm);
 	BackgroundWorkerUnblockSignals();
@@ -399,7 +401,6 @@ bdr_supervisor_worker_main(Datum main_arg)
 
 	LWLockAcquire(BdrWorkerCtl->lock, LW_EXCLUSIVE);
 	BdrWorkerCtl->supervisor_latch = &MyProc->procLatch;
-	ResetLatch(&MyProc->procLatch);
 	LWLockRelease(BdrWorkerCtl->lock);
 
 	elog(DEBUG1, "BDR supervisor connected to DB "BDR_SUPERVISOR_DBNAME);
