@@ -69,7 +69,7 @@ ResultRelInfo *
 bdr_create_result_rel_info(Relation rel)
 {
 	ResultRelInfo *resultRelInfo = makeNode(ResultRelInfo);
-	resultRelInfo->ri_RangeTableIndex = 1;		/* dummy */
+	resultRelInfo->ri_RangeTableIndex = 0;  /* no range table entry */
 	resultRelInfo->ri_RelationDesc = rel;
 	resultRelInfo->ri_TrigInstrument = NULL;
         return resultRelInfo;
