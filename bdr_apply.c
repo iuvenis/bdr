@@ -40,7 +40,6 @@
 
 #include "executor/executor.h"
 #include "executor/spi.h"
-#include "executor/tuptable.h"
 
 #include "libpq/pqformat.h"
 
@@ -594,8 +593,8 @@ process_remote_insert(StringInfo s)
 	BDRTupleData new_tuple;
 	TupleTableSlot *newslot;
 	TupleTableSlot *oldslot;
-        HeapTupleTableSlot *oldhslot;
-        HeapTupleTableSlot *newhslot;
+        HeapTuple conflicting_htuple;
+        HeapTuple new_htuple;
 	BDRRelation	*rel;
 	bool		started_tx;
 	ResultRelInfo *relinfo;
@@ -642,7 +641,7 @@ process_remote_insert(StringInfo s)
 
 	estate = CreateExecutorState();
 	newslot = ExecInitExtraTupleSlot(estate, NULL, &TTSOpsHeapTuple);
-	oldslot = ExecInitExtraTupleSlot(estate, NULL, &TTSOpsHeapTuple);
+	oldslot = ExecInitExtraTupleSlot(estate, NULL, &TTSOpsBufferHeapTuple);
 	ExecSetSlotDescriptor(newslot, RelationGetDescr(rel->rel));
 	ExecSetSlotDescriptor(oldslot, RelationGetDescr(rel->rel));
 
@@ -673,8 +672,6 @@ process_remote_insert(StringInfo s)
 
 	build_index_scan_keys(relinfo, index_keys, &new_tuple);
 
-        oldhslot = (HeapTupleTableSlot*) oldslot;
-        newhslot = (HeapTupleTableSlot*) newslot;
 	/* do a SnapshotDirty search for conflicting tuples */
 	for (i = 0; i < relinfo->ri_NumIndices; i++)
 	{
@@ -702,24 +699,23 @@ process_remote_insert(StringInfo s)
 								oldslot, true, LockTupleExclusive);
 
 		/* alert if there's more than one conflicting unique key */
-		if (found &&
-			ItemPointerIsValid(&conflicting_tid) &&
-			!ItemPointerEquals(&oldhslot->tuple->t_self,
-							   &conflicting_tid))
+		if (found)
 		{
-			/* TODO: Report tuple identity in log */
-			ereport(ERROR,
-				(errcode(ERRCODE_UNIQUE_VIOLATION),
-				errmsg("multiple unique constraints violated by remotely INSERTed tuple"),
-				errdetail("Cannot apply transaction because remotely INSERTed tuple "
-					  "conflicts with a local tuple on more than one UNIQUE "
-					  "constraint and/or PRIMARY KEY"),
-				errhint("Resolve the conflict by removing or changing the conflicting "
-					"local tuple")));
-		}
-		else if (found)
-		{
-			ItemPointerCopy(&oldhslot->tuple->t_self, &conflicting_tid);
+			conflicting_htuple = oldslot->tts_ops->get_heap_tuple(oldslot);
+
+			if (ItemPointerIsValid(&conflicting_tid) &&
+				!ItemPointerEquals(&conflicting_htuple->t_self, &conflicting_tid))
+			    /* TODO: Report tuple identity in log */
+			    ereport(ERROR,
+				    (errcode(ERRCODE_UNIQUE_VIOLATION),
+				    errmsg("multiple unique constraints violated by remotely INSERTed tuple"),
+				    errdetail("Cannot apply transaction because remotely INSERTed tuple "
+					    "conflicts with a local tuple on more than one UNIQUE "
+					    "constraint and/or PRIMARY KEY"),
+				    errhint("Resolve the conflict by removing or changing the conflicting "
+					    "local tuple")));
+
+			ItemPointerCopy(&conflicting_htuple->t_self, &conflicting_tid);
 			conflict = true;
 			break;
 		}
@@ -730,6 +726,8 @@ process_remote_insert(StringInfo s)
 	}
 
 	PushActiveSnapshot(GetTransactionSnapshot());
+
+        new_htuple = newslot->tts_ops->get_heap_tuple(newslot);
 
 	/*
 	 * If there's a conflict use the version created later, otherwise do a
@@ -745,7 +743,7 @@ process_remote_insert(StringInfo s)
 		BdrApplyConflict *apply_conflict = NULL; /* Mute compiler */
 		BdrConflictResolution resolution;
 
-		get_local_tuple_origin(oldhslot->tuple, &local_ts, &local_node_id);
+		get_local_tuple_origin(conflicting_htuple, &local_ts, &local_node_id);
 
 		/*
 		 * Use conflict triggers and/or last-update-wins to decide which tuple
@@ -753,7 +751,7 @@ process_remote_insert(StringInfo s)
 		 */
 		check_apply_update(BdrConflictType_InsertInsert,
 						   local_node_id, local_ts, rel,
-						   oldhslot->tuple, newhslot->tuple, &user_tuple,
+						   conflicting_htuple, new_htuple, &user_tuple,
 						   &apply_update, &log_update, &resolution);
 
 		/*
@@ -789,8 +787,8 @@ process_remote_insert(StringInfo s)
 			}
 
 			simple_heap_update(rel->rel,
-							   &oldhslot->tuple->t_self,
-							   newhslot->tuple);
+							   &conflicting_htuple->t_self,
+							   new_htuple);
 			/* races will be resolved by abort/retry */
 			UserTableUpdateOpenIndexes(estate, relinfo, newslot, true);
 
@@ -806,7 +804,7 @@ process_remote_insert(StringInfo s)
 	}
 	else
 	{
-		simple_heap_insert(rel->rel, newhslot->tuple);
+		simple_table_tuple_insert(rel->rel, newslot);
 		UserTableUpdateOpenIndexes(estate, relinfo, newslot, false);
 		bdr_count_insert();
 	}
@@ -836,7 +834,7 @@ process_remote_insert(StringInfo s)
 		 * Release transaction bound resources for CONCURRENTLY support.
 		 */
 		MemoryContextSwitchTo(MessageContext);
-		ht = heap_copytuple(newhslot->tuple);
+		ht = heap_copytuple(new_htuple);
 
 		LockRelationIdForSession(&lockid, RowExclusiveLock);
 		bdr_heap_close(rel, NoLock);
@@ -888,8 +886,8 @@ process_remote_update(StringInfo s)
 	EState	   *estate;
 	TupleTableSlot *newslot;
 	TupleTableSlot *oldslot;
-        HeapTupleTableSlot *newhslot;
-        HeapTupleTableSlot *oldhslot;
+	HeapTuple new_htuple;
+        HeapTuple old_htuple;
 	bool		pkey_sent;
 	bool		found_tuple;
 	BDRTupleData old_tuple;
@@ -935,7 +933,7 @@ process_remote_update(StringInfo s)
 			 action);
 
 	estate = CreateExecutorState();
-	oldslot = ExecInitExtraTupleSlot(estate, NULL, &TTSOpsHeapTuple);
+	oldslot = ExecInitExtraTupleSlot(estate, NULL, &TTSOpsBufferHeapTuple);
 	ExecSetSlotDescriptor(oldslot, RelationGetDescr(rel->rel));
 	newslot = ExecInitExtraTupleSlot(estate, NULL, &TTSOpsHeapTuple);
 	ExecSetSlotDescriptor(newslot, RelationGetDescr(rel->rel));
@@ -987,8 +985,6 @@ process_remote_update(StringInfo s)
 	found_tuple = find_pkey_tuple(skey, rel, idxrel, oldslot, true,
 						pkey_sent ? LockTupleExclusive : LockTupleNoKeyExclusive);
 
-        oldhslot = (HeapTupleTableSlot *) oldslot;
-        newhslot = (HeapTupleTableSlot *) newslot;
 	if (found_tuple)
 	{
 		TimestampTz local_ts;
@@ -998,13 +994,15 @@ process_remote_update(StringInfo s)
 		BdrApplyConflict *apply_conflict = NULL; /* Mute compiler */
 		BdrConflictResolution resolution;
 
-		remote_tuple = heap_modify_tuple(oldhslot->tuple,
+		old_htuple = oldslot->tts_ops->get_heap_tuple(oldslot);
+		remote_tuple = heap_modify_tuple(old_htuple,
 										 RelationGetDescr(rel->rel),
 										 new_tuple.values,
 										 new_tuple.isnull,
 										 new_tuple.changed);
 
 		ExecStoreHeapTuple(remote_tuple, newslot, true);
+		new_htuple = newslot->tts_ops->get_heap_tuple(newslot);
 
 #ifdef VERBOSE_UPDATE
 		{
@@ -1018,7 +1016,7 @@ process_remote_update(StringInfo s)
 		}
 #endif
 
-		get_local_tuple_origin(oldhslot->tuple, &local_ts, &local_node_id);
+		get_local_tuple_origin(old_htuple, &local_ts, &local_node_id);
 
 		/*
 		 * Use conflict triggers and/or last-update-wins to decide which tuple
@@ -1026,7 +1024,7 @@ process_remote_update(StringInfo s)
 		 */
 		check_apply_update(BdrConflictType_UpdateUpdate,
 						   local_node_id, local_ts, rel,
-						   oldhslot->tuple, newhslot->tuple,
+						   old_htuple, new_htuple,
 						   &user_tuple, &apply_update,
 						   &log_update, &resolution);
 
@@ -1048,6 +1046,7 @@ process_remote_update(StringInfo s)
 		if (apply_update)
 		{
 			ResultRelInfo *relinfo = bdr_create_result_rel_info(rel->rel);
+			bool updateIndexes = false;
 			/*
 			 * User specified conflict handler provided a new tuple; form it to
 			 * a bdr tuple.
@@ -1060,8 +1059,8 @@ process_remote_update(StringInfo s)
 				ExecStoreHeapTuple(user_tuple, newslot, true);
 			}
 
-			simple_heap_update(rel->rel, &oldhslot->tuple->t_self, newhslot->tuple);
-			UserTableUpdateIndexes(estate, relinfo, newslot, true);
+			simple_table_tuple_update(rel->rel, &old_htuple->t_self, newslot, InvalidSnapshot, &updateIndexes);
+			UserTableUpdateIndexes(estate, relinfo, newslot, updateIndexes);
 			bdr_count_update();
 		}
 
@@ -1122,8 +1121,9 @@ process_remote_update(StringInfo s)
 			log_tuple("USER tuple:%s", RelationGetDescr(rel->rel), user_tuple);
 #endif
 			ExecStoreHeapTuple(user_tuple, newslot, true);
+			new_htuple = newslot->tts_ops->get_heap_tuple(newslot);
 
-			simple_heap_insert(rel->rel, newhslot->tuple);
+			simple_heap_insert(rel->rel, new_htuple);
 			UserTableUpdateOpenIndexes(estate, relinfo, newslot, false);
 		}
 
@@ -1155,7 +1155,7 @@ process_remote_delete(StringInfo s)
 	EState	   *estate;
 	BDRTupleData oldtup;
 	TupleTableSlot *oldslot;
-        HeapTupleTableSlot *oldhslot;
+	HeapTuple old_htuple;
 	Oid			idxoid;
 	BDRRelation	*rel;
 	Relation	idxrel;
@@ -1203,7 +1203,7 @@ process_remote_delete(StringInfo s)
 	}
 
 	estate = CreateExecutorState();
-	oldslot = ExecInitExtraTupleSlot(estate, NULL, &TTSOpsHeapTuple);
+	oldslot = ExecInitExtraTupleSlot(estate, NULL, &TTSOpsBufferHeapTuple);
 	ExecSetSlotDescriptor(oldslot, RelationGetDescr(rel->rel));
 
 	read_tuple_parts(s, rel, &oldtup);
@@ -1245,8 +1245,8 @@ process_remote_delete(StringInfo s)
 
 	if (found_old)
 	{
-		oldhslot = (HeapTupleTableSlot *) oldslot;
-		simple_heap_delete(rel->rel, &oldhslot->tuple->t_self);
+		old_htuple = oldslot->tts_ops->get_heap_tuple(oldslot);
+		simple_table_tuple_delete(rel->rel, &old_htuple->t_self, InvalidSnapshot);
 		bdr_count_delete();
 	}
 	else
@@ -1275,7 +1275,13 @@ process_remote_delete(StringInfo s)
 		/* Since the local tuple is missing, fill slot from the received data. */
 		remote_tuple = heap_form_tuple(RelationGetDescr(rel->rel),
 									   oldtup.values, oldtup.isnull);
-		ExecStoreHeapTuple(remote_tuple, oldslot, true);
+		/* 
+		 * Force store because oldslot is a BufferHeapTTS, as we originally
+		 * expected to find a buffer with the existing tuple. Having found
+		 * no such buffer we (ab)use oldslot as a HeapTTS to pass the tuple
+		 * to the conflict table
+		 */
+		ExecForceStoreHeapTuple(remote_tuple, oldslot, true);
 
 		/*
 		 * Trigger user specified conflict handler so that application may
