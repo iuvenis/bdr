@@ -1828,6 +1828,7 @@ bdr_locks_release_local_ddl_lock(const BDRNodeId * const lock)
 
 		/* nothing to unlock, if there's a lock it's owned by someone else */
 		CommitTransactionCommand();
+		(void) MemoryContextSwitchTo(old_ctx);
 		return;
 	}
 
@@ -1838,11 +1839,11 @@ bdr_locks_release_local_ddl_lock(const BDRNodeId * const lock)
 
 	latch = bdr_my_locks_database->requestor;
 
+	CommitTransactionCommand();
+	(void) MemoryContextSwitchTo(old_ctx);
 	/* Ensure that if on disk and shmem state diverge we crash and recover */
 	START_CRIT_SECTION();
 
-	CommitTransactionCommand();
-	(void) MemoryContextSwitchTo(old_ctx);
 
 	Assert(bdr_my_locks_database->lock_state == BDR_LOCKSTATE_NOLOCK);
 	bdr_my_locks_database->lockcount--;
