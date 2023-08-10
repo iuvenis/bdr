@@ -66,7 +66,9 @@ const char *get_conflict_handlers_for_table_sql =
 
 static void bdr_conflict_handlers_check_handler_fun(Relation rel, Oid proc_oid);
 static void bdr_conflict_handlers_check_access(Oid reloid);
+#ifdef BDR_CONFLICT_HANDLERS
 static const char *bdr_conflict_handlers_event_type_name(BdrConflictType event_type);
+#endif
 
 static Oid	bdr_conflict_handler_table_oid = InvalidOid;
 static Oid	bdr_conflict_handler_type_oid = InvalidOid;
@@ -531,6 +533,7 @@ bdr_conflict_handlers_check_handler_fun(Relation rel, Oid proc_oid)
 			 hint ? errhint("%s", hint) : 0));
 }
 
+#ifdef BDR_CONFLICT_HANDLERS
 /*
  * get a list of user conflict handlers suitable for the specified relation
  * and handler type; ch_type may be NULL, in this case only handlers without
@@ -671,6 +674,7 @@ bdr_conflict_handlers_event_type_name(BdrConflictType event_type)
 
 	return "(unknown)";
 }
+#endif
 
 /*
  * Call a list of handlers (identified by Oids) and return the first non-NULL
@@ -682,130 +686,133 @@ bdr_conflict_handlers_resolve(BDRRelation * rel, const HeapTuple local,
 							  BdrConflictType event_type,
 							  uint64 timeframe, bool *skip)
 {
-	/* Commented out because initializing FunctionCallInfoData directly is deprecated and we
-	 * don't need custom conflict handlers anyway
-	 */
-	/* size_t		i; */
-	/* Datum		retval; */
-	/* FunctionCallInfoData fcinfo; */
-	/* FmgrInfo	finfo; */
-	/* HeapTuple	fun_tup; */
-	/* HeapTupleData result_tup; */
-	/* HeapTupleHeader tup_header; */
-	/* TupleDesc	retdesc; */
-	/* Datum		val; */
-	/* bool		isnull; */
-	/* Oid			event_oid; */
-	/* const char *event = bdr_conflict_handlers_event_type_name(event_type); */
+/* Removed by default because initializing FunctionCallInfoData directly is deprecated and we
+ * don't need custom conflict handlers anyway
+ */
+#ifdef BDR_CONFLICT_HANDLERS
+	size_t		i;
+	Datum		retval;
+	FunctionCallInfoData fcinfo;
+	FmgrInfo	finfo;
+	HeapTuple	fun_tup;
+	HeapTupleData result_tup;
+	HeapTupleHeader tup_header;
+	TupleDesc	retdesc;
+	Datum		val;
+	bool		isnull;
+	Oid			event_oid;
+	const char *event = bdr_conflict_handlers_event_type_name(event_type);
 
-	/* *skip = false; */
+	*skip = false;
 
-	/* bdr_get_conflict_handlers(rel); */
+	bdr_get_conflict_handlers(rel);
 
-	/* event_oid = GetSysCacheOidError2(ENUMTYPOIDNAME, */
-	/* 								 Anum_pg_enum_oid, */
-	/* 								 bdr_conflict_handler_type_oid, */
-	/* 								 CStringGetDatum(event)); */
+	event_oid = GetSysCacheOidError2(ENUMTYPOIDNAME,
+									 Anum_pg_enum_oid,
+									 bdr_conflict_handler_type_oid,
+									 CStringGetDatum(event));
 
-	/* for (i = 0; i < rel->conflict_handlers_len; ++i) */
-	/* { */
-	/* 	/\* */
-	/* 	 * ignore all handlers which don't match the type or are not usable by */
-	/* 	 * timeframe */
-	/* 	 *\/ */
-	/* 	if (rel->conflict_handlers[i].handler_type != event_type || */
-	/* 		(rel->conflict_handlers[i].timeframe != 0 && */
-	/* 		 rel->conflict_handlers[i].timeframe < timeframe)) */
-	/* 		continue; */
+	for (i = 0; i < rel->conflict_handlers_len; ++i)
+	{
+		/*
+		 * ignore all handlers which don't match the type or are not usable by
+		 * timeframe
+		 */
+		if (rel->conflict_handlers[i].handler_type != event_type ||
+			(rel->conflict_handlers[i].timeframe != 0 &&
+			 rel->conflict_handlers[i].timeframe < timeframe))
+			continue;
 
-	/* 	fmgr_info(rel->conflict_handlers[i].handler_oid, &finfo); */
-	/* 	InitFunctionCallInfoData(fcinfo, &finfo, 5, InvalidOid, NULL, NULL); */
+		fmgr_info(rel->conflict_handlers[i].handler_oid, &finfo);
+		InitFunctionCallInfoData(fcinfo, &finfo, 5, InvalidOid, NULL, NULL);
 
-	/* 	if (local != NULL) */
-	/* 	{ */
-	/* 		fcinfo.arg[0] = */
-	/* 			heap_copy_tuple_as_datum(local, RelationGetDescr(rel->rel)); */
-	/* 		fcinfo.argnull[0] = false; */
-	/* 	} */
-	/* 	else */
-	/* 		fcinfo.argnull[0] = true; */
+		if (local != NULL)
+		{
+			fcinfo.arg[0] =
+				heap_copy_tuple_as_datum(local, RelationGetDescr(rel->rel));
+			fcinfo.argnull[0] = false;
+		}
+		else
+			fcinfo.argnull[0] = true;
 
-	/* 	if (remote != NULL) */
-	/* 	{ */
-	/* 		fcinfo.arg[1] = */
-	/* 			heap_copy_tuple_as_datum(remote, RelationGetDescr(rel->rel)); */
-	/* 		fcinfo.argnull[1] = false; */
-	/* 	} */
-	/* 	else */
-	/* 		fcinfo.argnull[1] = true; */
+		if (remote != NULL)
+		{
+			fcinfo.arg[1] =
+				heap_copy_tuple_as_datum(remote, RelationGetDescr(rel->rel));
+			fcinfo.argnull[1] = false;
+		}
+		else
+			fcinfo.argnull[1] = true;
 
-	/* 	fcinfo.arg[2] = CStringGetTextDatum(command_tag); */
-	/* 	fcinfo.arg[3] = ObjectIdGetDatum(RelationGetRelid(rel->rel)); */
-	/* 	fcinfo.arg[4] = event_oid; */
+		fcinfo.arg[2] = CStringGetTextDatum(command_tag);
+		fcinfo.arg[3] = ObjectIdGetDatum(RelationGetRelid(rel->rel));
+		fcinfo.arg[4] = event_oid;
 
-	/* 	retval = FunctionCallInvoke(&fcinfo); */
+		retval = FunctionCallInvoke(&fcinfo);
 
-	/* 	if (!fcinfo.argnull[0]) */
-	/* 		heap_freetuple((HeapTuple) DatumGetPointer(fcinfo.arg[0])); */
-	/* 	if (!fcinfo.argnull[1]) */
-	/* 		heap_freetuple((HeapTuple) DatumGetPointer(fcinfo.arg[1])); */
+		if (!fcinfo.argnull[0])
+			heap_freetuple((HeapTuple) DatumGetPointer(fcinfo.arg[0]));
+		if (!fcinfo.argnull[1])
+			heap_freetuple((HeapTuple) DatumGetPointer(fcinfo.arg[1]));
 
-	/* 	if (fcinfo.isnull) */
-	/* 		elog(ERROR, "handler return value is NULL"); */
+		if (fcinfo.isnull)
+			elog(ERROR, "handler return value is NULL");
 
-	/* 	tup_header = DatumGetHeapTupleHeader(retval); */
+		tup_header = DatumGetHeapTupleHeader(retval);
 
-	/* 	fun_tup = SearchSysCache1(PROCOID, */
-	/* 				ObjectIdGetDatum(rel->conflict_handlers[i].handler_oid)); */
-	/* 	if (!HeapTupleIsValid(fun_tup)) */
-	/* 		elog(ERROR, "cache lookup failed for function %u", */
-	/* 			 rel->conflict_handlers[i].handler_oid); */
+		fun_tup = SearchSysCache1(PROCOID,
+					ObjectIdGetDatum(rel->conflict_handlers[i].handler_oid));
+		if (!HeapTupleIsValid(fun_tup))
+			elog(ERROR, "cache lookup failed for function %u",
+				 rel->conflict_handlers[i].handler_oid);
 
-	/* 	retdesc = build_function_result_tupdesc_t(fun_tup); */
+		retdesc = build_function_result_tupdesc_t(fun_tup);
 
-	/* 	ReleaseSysCache(fun_tup); */
+		ReleaseSysCache(fun_tup);
 
-	/* 	result_tup.t_len = HeapTupleHeaderGetDatumLength(tup_header); */
-	/* 	ItemPointerSetInvalid(&(result_tup.t_self)); */
-	/* 	result_tup.t_tableOid = InvalidOid; */
-	/* 	result_tup.t_data = tup_header; */
+		result_tup.t_len = HeapTupleHeaderGetDatumLength(tup_header);
+		ItemPointerSetInvalid(&(result_tup.t_self));
+		result_tup.t_tableOid = InvalidOid;
+		result_tup.t_data = tup_header;
 
-	/* 	val = fastgetattr(&result_tup, 2, retdesc, &isnull); */
+		val = fastgetattr(&result_tup, 2, retdesc, &isnull);
 
-	/* 	if (isnull) */
-	/* 		elog(ERROR, "handler action may not be NULL!"); */
+		if (isnull)
+			elog(ERROR, "handler action may not be NULL!");
 
-	/* 	if (DatumGetObjectId(val) == bdr_conflict_handler_action_row_oid) */
-	/* 	{ */
-	/* 		HeapTuple	tup = palloc(sizeof(*tup)); */
+		if (DatumGetObjectId(val) == bdr_conflict_handler_action_row_oid)
+		{
+			HeapTuple	tup = palloc(sizeof(*tup));
 
-	/* 		val = fastgetattr(&result_tup, 1, retdesc, &isnull); */
+			val = fastgetattr(&result_tup, 1, retdesc, &isnull);
 
-	/* 		if (isnull) */
-	/* 			elog(ERROR, "handler action is ROW but returned row is NULL"); */
+			if (isnull)
+				elog(ERROR, "handler action is ROW but returned row is NULL");
 
-	/* 		tup_header = DatumGetHeapTupleHeader(val); */
+			tup_header = DatumGetHeapTupleHeader(val);
 
-	/* 		if(HeapTupleHeaderGetTypeId(tup_header) != rel->rel->rd_rel->reltype) */
-	/* 			elog(ERROR, "Handler %d returned unexpected tuple type %d", */
-	/* 				 rel->conflict_handlers[i].handler_oid, */
-	/* 				 retdesc->attrs[0].atttypid); */
+			if(HeapTupleHeaderGetTypeId(tup_header) != rel->rel->rd_rel->reltype)
+				elog(ERROR, "Handler %d returned unexpected tuple type %d",
+					 rel->conflict_handlers[i].handler_oid,
+					 retdesc->attrs[0].atttypid);
 
-	/* 		tup->t_len = HeapTupleHeaderGetDatumLength(tup_header); */
-	/* 		ItemPointerSetInvalid(&(tup->t_self)); */
-	/* 		tup->t_tableOid = InvalidOid; */
-	/* 		tup->t_data = tup_header; */
+			tup->t_len = HeapTupleHeaderGetDatumLength(tup_header);
+			ItemPointerSetInvalid(&(tup->t_self));
+			tup->t_tableOid = InvalidOid;
+			tup->t_data = tup_header;
 
-	/* 		return tup; */
-	/* 	} */
-	/* 	else if (DatumGetObjectId(val) == bdr_conflict_handler_action_skip_oid) */
-	/* 	{ */
-	/* 		*skip = true; */
-	/* 		return NULL; */
-	/* 	} */
-	/* 	else if (DatumGetObjectId(val) == bdr_conflict_handler_action_ignore_oid) */
-	/* 		continue; */
-	/* } */
+			return tup;
+		}
+		else if (DatumGetObjectId(val) == bdr_conflict_handler_action_skip_oid)
+		{
+			*skip = true;
+			return NULL;
+		}
+		else if (DatumGetObjectId(val) == bdr_conflict_handler_action_ignore_oid)
+			continue;
+	}
 
+#else
 	return NULL;
+#endif
 }
