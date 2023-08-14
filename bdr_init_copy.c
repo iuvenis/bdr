@@ -169,7 +169,6 @@ main(int argc, char **argv)
 {
 	int	i;
 	int	c;
-	PQExpBuffer recoveryconfcontents = createPQExpBuffer();
 	RemoteInfo *remote_info;
 	NodeInfo	node_info;
 	char		restore_point_name[NAMEDATALEN];
@@ -185,8 +184,7 @@ main(int argc, char **argv)
 			   *remote_dbport = NULL,
 			   *remote_dbuser = NULL;
 	char	   *postgresql_conf = NULL,
-			   *pg_hba_conf = NULL,
-			   *recovery_conf = NULL;
+			   *pg_hba_conf = NULL;
 	char	   *replication_sets = NULL;
 	bool		use_existing_data_dir;
 	int			pg_ctl_ret,
@@ -210,9 +208,8 @@ main(int argc, char **argv)
 		{"log-file", required_argument, NULL, 'l'},
 		{"postgresql-conf", required_argument, NULL, 6},
 		{"hba-conf", required_argument, NULL, 7},
-		{"recovery-conf", required_argument, NULL, 8},
 		{"stop", no_argument, NULL, 's'},
-		{"replication-sets", required_argument, NULL, 9},
+		{"replication-sets", required_argument, NULL, 8},
 		{NULL, 0, NULL, 0}
 	};
 
@@ -300,13 +297,6 @@ main(int argc, char **argv)
 					break;
 				}
 			case 8:
-				{
-					recovery_conf = pg_strdup(optarg);
-					if (recovery_conf != NULL && !file_exists(recovery_conf))
-						die(_("The specified recovery.conf file does not exist."));
-					break;
-				}
-			case 9:
 				replication_sets = validate_replication_set_input(optarg);
 				break;
 			case 's':
@@ -631,7 +621,6 @@ usage(void)
 	printf(_("\nConfiguration files override:\n"));
 	printf(_("  --hba-conf              path to the new pg_hba.conf\n"));
 	printf(_("  --postgresql-conf       path to the new postgresql.conf\n"));
-	printf(_("  --recovery-conf         path to the template recovery.conf\n"));
 	printf(_("\nConnection options:\n"));
 	printf(_("  -d, --remote-dbname=CONNSTR\n"));
 	printf(_("                          dbname or connection string for remote node\n"));
