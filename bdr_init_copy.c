@@ -129,7 +129,6 @@ static uint64 GenerateSystemIdentifier(void);
 static uint64 read_sysid(const char *data_dir);
 static void set_sysid(uint64 sysid);
 
-static void WriteRecoveryConf(PQExpBuffer contents);
 static void CopyConfFile(char *fromfile, char *tofile);
 
 char *get_connstr(char *connstr, char *dbname, char *dbhost, char *dbport, char *dbuser);
@@ -139,6 +138,7 @@ static void appendPQExpBufferConnstrValue(PQExpBuffer buf, const char *str);
 static bool file_exists(const char *path);
 static bool path_file_exists(const char *path, const char *filename);
 static void copy_file(char *fromfile, char *tofile);
+static void create_standby_file(char *data_dir);
 static char *find_other_exec_or_die(const char *argv0, const char *target, const char *versionstr);
 static bool postmaster_is_alive(pid_t pid);
 static long get_pgpid(void);
@@ -471,32 +471,6 @@ main(int argc, char **argv)
 	print_msg(VERBOSITY_NORMAL,
 			  _("Bringing local node to the restore point ...\n"));
 
-	if (!path_file_exists(data_dir, "recovery.conf"))
-	{
-		appendPQExpBuffer(recoveryconfcontents, "standby_mode = 'on'\n");
-		appendPQExpBuffer(recoveryconfcontents, "primary_conninfo = '%s'\n",
-								escape_single_quotes_ascii(remote_connstr));
-	}
-	else
-		printf(_("updating recovery target in existing recovery.conf\n"));
-
-	appendPQExpBuffer(recoveryconfcontents, "recovery_target_name = '%s'\n", restore_point_name);
-	appendPQExpBuffer(recoveryconfcontents, "recovery_target_inclusive = true\n");
-	if (PG_VERSION_NUM/100 == 904)
-	{
-		appendPQExpBuffer(recoveryconfcontents, "pause_at_recovery_target = off");
-	}
-	else if (PG_VERSION_NUM >= 90600)
-	{
-		appendPQExpBuffer(recoveryconfcontents, "recovery_target_action = promote");
-	}
-	else
-	{
-		die(_("Only 9.4bdr and 9.6 are supported"));
-	}
-
-	WriteRecoveryConf(recoveryconfcontents);
-
 	/*
 	 * Start local node with BDR disabled, and wait until it starts accepting
 	 * connections which means it has caught up to the restore point.
@@ -506,8 +480,10 @@ main(int argc, char **argv)
 	 * in wait_postmaster_connection().
 	 */
 	snprintf(&pg_ctl_cmd_buf[0], PG_CTL_CMD_BUF_SIZE,
-		"start -l \'%s\' -o \"-c shared_preload_libraries=''\"",
-		log_file_name);
+		"start -l \'%s\' -o \"-c shared_preload_libraries='' -c primary_conninfo='%s' "
+			"-c recovery_target_name='%s' -c recovery_target_inclusive=true "
+			"-c recovery_target_action='promote'\"",
+		log_file_name, escape_single_quotes_ascii(remote_connstr), restore_point_name);
 	pg_ctl_ret = run_pg_ctl(pg_ctl_cmd_buf);
 	if (pg_ctl_ret != 0)
 		die(_("postgres startup for restore point catchup failed with %d. See '%s'."), pg_ctl_ret, log_file_name);
@@ -922,6 +898,8 @@ initialize_data_dir(char *data_dir, char *connstr,
 		CopyConfFile(postgresql_conf, "postgresql.conf");
 	if (pg_hba_conf)
 		CopyConfFile(pg_hba_conf, "pg_hba.conf");
+
+	create_standby_file(data_dir);
 }
 
 /*
@@ -1651,32 +1629,6 @@ read_sysid(const char *data_dir)
 }
 
 /*
- * Write contents of recovery.conf
- */
-static void
-WriteRecoveryConf(PQExpBuffer contents)
-{
-	char		filename[MAXPGPATH];
-	FILE	   *cf;
-
-	sprintf(filename, "%s/recovery.conf", data_dir);
-
-	cf = fopen(filename, "a");
-	if (cf == NULL)
-	{
-		die(_("%s: could not open/create file \"%s\": %s\n"), progname, filename, strerror(errno));
-	}
-
-	if (fwrite(contents->data, contents->len, 1, cf) != 1)
-	{
-		die(_("%s: could not write to file \"%s\": %s\n"),
-				progname, filename, strerror(errno));
-	}
-
-	fclose(cf);
-}
-
-/*
  * Copy file to data
  */
 static void
@@ -1993,6 +1945,26 @@ copy_file(char *fromfile, char *tofile)
 	close(srcfd);
 
 	free(buffer);
+}
+
+/*
+ * Since PG12 an empty file is used to signal the postmaster to
+ * start in standby mode. This function creates that file
+ */
+static void
+create_standby_file(char *data_dir)
+{
+	char signal_file[MAXPGPATH];
+	int signalfd;
+
+	snprintf(signal_file, sizeof(signal_file), "%s/%s", data_dir,
+		"standby.signal");
+	signalfd = open(signal_file, O_WRONLY | O_CREAT | O_TRUNC,
+		S_IRUSR | S_IWUSR);
+	if (signalfd < 0)
+		die(_("Could not create file \"%s\".\n"), signal_file);
+	if (close(signalfd))
+		die(_("Could not close file \"%s\".\n"), signal_file);
 }
 
 
