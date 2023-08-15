@@ -1434,7 +1434,8 @@ bdr_terminate_workers_byid(const BDRNodeId * const node, BdrWorkerType worker_ty
 	 * recycling no matter what we do and it's no worse whether or not we go
 	 * via pg_terminate_backend.
 	 */
-	return DatumGetBool(DirectFunctionCall1(pg_terminate_backend, Int32GetDatum(pid)));
+	return DatumGetBool(DirectFunctionCall2(pg_terminate_backend,
+			Int32GetDatum(pid), Int64GetDatum(0)));
 }
 
 Datum

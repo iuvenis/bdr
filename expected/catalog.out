@@ -5,11 +5,11 @@ WHERE attrelid = 'bdr.bdr_nodes'::regclass
 ORDER BY attnum;
  attnum |      attname       | attisdropped 
 --------+--------------------+--------------
-     -7 | tableoid           | f
-     -6 | cmax               | f
-     -5 | xmax               | f
-     -4 | cmin               | f
-     -3 | xmin               | f
+     -6 | tableoid           | f
+     -5 | cmax               | f
+     -4 | xmax               | f
+     -3 | cmin               | f
+     -2 | xmin               | f
      -1 | ctid               | f
       1 | node_sysid         | f
       2 | node_timeline      | f
@@ -29,11 +29,11 @@ WHERE attrelid = 'bdr.bdr_connections'::regclass
 ORDER BY attnum;
  attnum |        attname         | attisdropped 
 --------+------------------------+--------------
-     -7 | tableoid               | f
-     -6 | cmax                   | f
-     -5 | xmax                   | f
-     -4 | cmin                   | f
-     -3 | xmin                   | f
+     -6 | tableoid               | f
+     -5 | cmax                   | f
+     -4 | xmax                   | f
+     -3 | cmin                   | f
+     -2 | xmin                   | f
      -1 | ctid                   | f
       1 | conn_sysid             | f
       2 | conn_timeline          | f
