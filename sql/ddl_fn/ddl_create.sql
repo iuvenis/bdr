@@ -358,14 +358,14 @@ $DDL$);
 SELECT bdr.bdr_replicate_ddl_command($DDL$
 CREATE OPERATOR public.@#@ (
    rightarg = int8,		-- left unary
-   procedure = numeric_fac
+   procedure = factorial
 );
 $DDL$);
 
 SELECT bdr.bdr_replicate_ddl_command($DDL$
 CREATE OPERATOR public.#@# (
    leftarg = int8,		-- right unary
-   procedure = numeric_fac
+   procedure = factorial
 );
 $DDL$);
 

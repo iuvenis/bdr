@@ -199,20 +199,6 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 \c regression
 \d+ test_tbl_inh_*
 
--- ensure tables WITH OIDs can't be created
-SHOW default_with_oids;
-CREATE TABLE tbl_with_oids() WITH oids;
-CREATE TABLE tbl_without_oids() WITHOUT oids;
-DROP TABLE tbl_without_oids;
-CREATE TABLE tbl_without_oids();
-DROP TABLE tbl_without_oids;
-SET default_with_oids = true;
-CREATE TABLE tbl_with_oids();
-CREATE TABLE tbl_with_oids() WITH OIDS;
-CREATE TABLE tbl_without_oids() WITHOUT oids;
-DROP TABLE tbl_without_oids;
-SET default_with_oids = false;
-
 -- ensure storage attributes in CREATE TABLE are replicated properly
 \c postgres
 CREATE TABLE tbl_showfillfactor (name char(500), unique (name) with (fillfactor=65)) with (fillfactor=75);
@@ -300,12 +286,12 @@ CREATE OPERATOR ## (
 
 CREATE OPERATOR @#@ (
    rightarg = int8,		-- left unary
-   procedure = numeric_fac
+   procedure = factorial
 );
 
 CREATE OPERATOR #@# (
    leftarg = int8,		-- right unary
-   procedure = numeric_fac
+   procedure = factorial
 );
 
 SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
