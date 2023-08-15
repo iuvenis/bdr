@@ -1,6 +1,6 @@
---- /Users/user/Documents/Repos/postgres/src/bin/pg_dump/pg_dump.c	2022-12-19 18:00:36.000000000 +0100
-+++ pg_dump.c	2023-01-23 09:12:59.000000000 +0100
-@@ -383,6 +383,7 @@
+--- /Users/user/Documents/Repos/postgres/src/bin/pg_dump/pg_dump.c	2023-08-10 10:46:27
++++ pg_dump.c	2023-08-15 13:20:41
+@@ -384,6 +384,7 @@
  		 */
  		{"attribute-inserts", no_argument, &dopt.column_inserts, 1},
  		{"binary-upgrade", no_argument, &dopt.binary_upgrade, 1},
@@ -8,7 +8,7 @@
  		{"column-inserts", no_argument, &dopt.column_inserts, 1},
  		{"disable-dollar-quoting", no_argument, &dopt.disable_dollar_quoting, 1},
  		{"disable-triggers", no_argument, &dopt.disable_triggers, 1},
-@@ -8646,7 +8647,7 @@
+@@ -8755,7 +8756,7 @@
  bool
  shouldPrintColumn(const DumpOptions *dopt, const TableInfo *tbinfo, int colno)
  {
@@ -17,7 +17,7 @@
  		return true;
  	if (tbinfo->attisdropped[colno])
  		return false;
-@@ -15642,6 +15643,38 @@
+@@ -15751,6 +15752,36 @@
  			}
  		}
  
@@ -37,15 +37,13 @@
 +									  tbinfo->attalign[j]);
 +					appendStringLiteralAH(q, tbinfo->attnames[j], fout);
 +					appendPQExpBufferStr(q, "\n  AND attrelid = ");
-+					appendStringLiteralAH(q, fmtId(tbinfo->dobj.name), fout);
++					appendStringLiteralAH(q, qualrelname, fout);
 +					appendPQExpBufferStr(q, "::pg_catalog.regclass;\n");
 +
 +					if (tbinfo->relkind == RELKIND_RELATION)
-+						appendPQExpBuffer(q, "ALTER TABLE ONLY %s ",
-+										  fmtId(tbinfo->dobj.name));
++						appendPQExpBuffer(q, "ALTER TABLE ONLY %s ", qualrelname);
 +					else
-+						appendPQExpBuffer(q, "ALTER FOREIGN TABLE %s ",
-+										  fmtId(tbinfo->dobj.name));
++						appendPQExpBuffer(q, "ALTER FOREIGN TABLE %s ", qualrelname);
 +
 +					appendPQExpBuffer(q, "DROP COLUMN %s;\n",
 +									  fmtId(tbinfo->attnames[j]));

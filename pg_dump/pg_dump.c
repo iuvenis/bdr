@@ -15768,15 +15768,13 @@ dumpTableSchema(Archive *fout, const TableInfo *tbinfo)
 									  tbinfo->attalign[j]);
 					appendStringLiteralAH(q, tbinfo->attnames[j], fout);
 					appendPQExpBufferStr(q, "\n  AND attrelid = ");
-					appendStringLiteralAH(q, fmtId(tbinfo->dobj.name), fout);
+					appendStringLiteralAH(q, qualrelname, fout);
 					appendPQExpBufferStr(q, "::pg_catalog.regclass;\n");
 
 					if (tbinfo->relkind == RELKIND_RELATION)
-						appendPQExpBuffer(q, "ALTER TABLE ONLY %s ",
-										  fmtId(tbinfo->dobj.name));
+						appendPQExpBuffer(q, "ALTER TABLE ONLY %s ", qualrelname);
 					else
-						appendPQExpBuffer(q, "ALTER FOREIGN TABLE %s ",
-										  fmtId(tbinfo->dobj.name));
+						appendPQExpBuffer(q, "ALTER FOREIGN TABLE %s ", qualrelname);
 
 					appendPQExpBuffer(q, "DROP COLUMN %s;\n",
 									  fmtId(tbinfo->attnames[j]));
