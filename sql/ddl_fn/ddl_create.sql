@@ -218,20 +218,6 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 \d+ test_tbl_exclude
 \c regression
 
--- ensure tables WITH OIDs can't be created
-SHOW default_with_oids;
-SELECT bdr.bdr_replicate_ddl_command($DDL$ CREATE TABLE public.tbl_with_oids() WITH oids; $DDL$);
-SELECT bdr.bdr_replicate_ddl_command($DDL$ CREATE TABLE public.tbl_without_oids() WITHOUT oids; $DDL$);
-SELECT bdr.bdr_replicate_ddl_command($DDL$ DROP TABLE public.tbl_without_oids; $DDL$);
-SELECT bdr.bdr_replicate_ddl_command($DDL$ CREATE TABLE public.tbl_without_oids(); $DDL$);
-SELECT bdr.bdr_replicate_ddl_command($DDL$ DROP TABLE public.tbl_without_oids; $DDL$);
-SET default_with_oids = true;
-SELECT bdr.bdr_replicate_ddl_command($DDL$ CREATE TABLE public.tbl_with_oids(); $DDL$);
-SELECT bdr.bdr_replicate_ddl_command($DDL$ CREATE TABLE public.tbl_with_oids() WITH OIDS; $DDL$);
-SELECT bdr.bdr_replicate_ddl_command($DDL$ CREATE TABLE public.tbl_without_oids() WITHOUT oids; $DDL$);
-SELECT bdr.bdr_replicate_ddl_command($DDL$ DROP TABLE public.tbl_without_oids; $DDL$);
-SET default_with_oids = false;
-
 -- ensure storage attributes in SELECT bdr.bdr_replicate_ddl_command($DDL$ CREATE TABLE public.are replicated properly $DDL$);
 \c postgres
 SELECT bdr.bdr_replicate_ddl_command($DDL$ CREATE TABLE public.tbl_showfillfactor (name char(500), unique (name) with (fillfactor=65)) with (fillfactor=75); $DDL$);
@@ -362,13 +348,6 @@ CREATE OPERATOR public.@#@ (
 );
 $DDL$);
 
-SELECT bdr.bdr_replicate_ddl_command($DDL$
-CREATE OPERATOR public.#@# (
-   leftarg = int8,		-- right unary
-   procedure = factorial
-);
-$DDL$);
-
 SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 \do public.##
 \do public.@#@
@@ -376,7 +355,6 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 \c regression
 \do public.##
 \do public.@#@
-\do public.#@#
 
 SELECT bdr.bdr_replicate_ddl_command($DDL$
 DROP OPERATOR public.##(path, path);
@@ -386,16 +364,10 @@ SELECT bdr.bdr_replicate_ddl_command($DDL$
 DROP OPERATOR public.@#@(none,int8);
 $DDL$);
 
-SELECT bdr.bdr_replicate_ddl_command($DDL$
-DROP OPERATOR public.#@#(int8,none);
-$DDL$);
-
 \do public.##
 \do public.@#@
-\do public.#@#
 
 SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 \c postgres
 \do public.##
 \do public.@#@
-\do public.#@#
