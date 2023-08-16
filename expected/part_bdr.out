@@ -122,9 +122,9 @@ $$
 LANGUAGE plpgsql;
 NOTICE:  All slots dropped
 -- There should now be zero slots and no connections to them
-SELECT pid, application_name, state, sent_location, write_location, flush_location, replay_location, sync_state  FROM pg_stat_replication;
- pid | application_name | state | sent_location | write_location | flush_location | replay_location | sync_state 
------+------------------+-------+---------------+----------------+----------------+-----------------+------------
+SELECT pid, application_name, state, sent_lsn, write_lsn, flush_lsn, replay_lsn, sync_state  FROM pg_stat_replication;
+ pid | application_name | state | sent_lsn | write_lsn | flush_lsn | replay_lsn | sync_state 
+-----+------------------+-------+----------+-----------+-----------+------------+------------
 (0 rows)
 
 SELECT slot_name, plugin, slot_type, datoid, database, active, xmin, catalog_xmin, restart_lsn, confirmed_flush_lsn FROM bdr.pg_replication_slots;
@@ -183,6 +183,7 @@ SELECT bdr.remove_bdr_from_local_node(true, true);
 WARNING:  forcing deletion of possibly active BDR node
 NOTICE:  node forced to parted state, now removing
 NOTICE:  removing BDR from node
+INFO:  BDR 1.0 global sequences not supported, nothing to convert
 NOTICE:  BDR removed from this node. You can now DROP EXTENSION bdr and, if this is the last BDR node on this PostgreSQL instance, remove bdr from shared_preload_libraries.
  remove_bdr_from_local_node 
 ----------------------------
