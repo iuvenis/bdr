@@ -740,12 +740,12 @@ prevent_drop_extension_bdr(DropStmt *stmt)
 	foreach(cell, stmt->objects)
 	{
 		ObjectAddress address;
-		List	   *objname = lfirst(cell);
+		Node	   *objname = lfirst(cell);
 		Relation	relation = NULL;
 
 		/* Get an ObjectAddress for the object. */
 		address = get_object_address(stmt->removeType,
-									 ((Node *) objname),
+									 objname,
 									 &relation,
 									 AccessExclusiveLock,
 									 stmt->missing_ok);
@@ -753,10 +753,7 @@ prevent_drop_extension_bdr(DropStmt *stmt)
 		if (!OidIsValid(address.objectId))
 			continue;
 
-		/* for an extension the object name is unqualified */
-		Assert(list_length(objname) == 1);
-
-		if (strcmp(strVal(linitial(objname)), "bdr") == 0)
+		if (strcmp(strVal(objname), "bdr") == 0)
 			ereport(ERROR,
 					(errmsg("Dropping the BDR extension is prohibited while BDR is active"),
 					 errhint("Part this node with bdr.part_by_node_names(...) first, or if appropriate use bdr.remove_bdr_from_local_node(...)")));
@@ -986,7 +983,7 @@ bdr_commandfilter(PlannedStmt *pstmt,
 	{
 		case T_DropStmt:
 			{
-				DropStmt   *stmt = (DropStmt *) parsetree;
+				DropStmt   *stmt = castNode(DropStmt, parsetree);
 
 				prevent_drop_extension_bdr(stmt);
 
