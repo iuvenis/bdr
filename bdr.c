@@ -920,7 +920,7 @@ _PG_init(void)
 		init_bdr_commandfilter();
 	} else if (!bdr_enabled)
 	{
-		elog(INFO, "BDR is disabled - skipping the registration of BDR workers");
+		elog(LOG, "BDR is disabled - skipping the registration of BDR workers");
 	}
 
 	MemoryContextSwitchTo(old_context);
