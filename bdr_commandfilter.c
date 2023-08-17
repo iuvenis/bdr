@@ -987,41 +987,13 @@ bdr_commandfilter(PlannedStmt *pstmt,
 
 				prevent_drop_extension_bdr(stmt);
 
-				if (PG_VERSION_NUM >= 90600 || EventTriggerSupportsObjectType(stmt->removeType))
-					break;
-				else
-					goto done;
-			}
-		case T_RenameStmt:
-			{
-				RenameStmt *stmt = (RenameStmt *) parsetree;
-
-				if (PG_VERSION_NUM >= 90600 || EventTriggerSupportsObjectType(stmt->renameType))
-					break;
-				else
-					goto done;
-			}
-		case T_AlterObjectSchemaStmt:
-			{
-				AlterObjectSchemaStmt *stmt = (AlterObjectSchemaStmt *) parsetree;
-
-				if (PG_VERSION_NUM >= 90600 || EventTriggerSupportsObjectType(stmt->objectType))
-					break;
-				else
-					goto done;
+				break;
 			}
 		case T_AlterOwnerStmt:
-			{
-				AlterOwnerStmt *stmt = (AlterOwnerStmt *) parsetree;
-
-				lock_type = BDR_LOCK_DDL;
-
-				if (PG_VERSION_NUM >= 90600 || EventTriggerSupportsObjectType(stmt->objectType))
-					break;
-				else
-					goto done;
-			}
-
+			lock_type = BDR_LOCK_DDL;
+		case T_RenameStmt:
+		case T_AlterObjectSchemaStmt:
+			break;
 		default:
 			break;
 	}
@@ -1077,7 +1049,6 @@ bdr_commandfilter(PlannedStmt *pstmt,
 
 				stmt = (IndexStmt *) parsetree;
 
-#if PG_VERSION_NUM >= 90600
 				/*
 				 * Only allow CONCURRENTLY when not wrapped in
 				 * bdr.replicate_ddl_command; see 2ndQuadrant/bdr-private#124
@@ -1100,7 +1071,6 @@ bdr_commandfilter(PlannedStmt *pstmt,
 											   "CREATE INDEX CONCURRENTLY without bdr.skip_ddl_replication set",
 											   AccessExclusiveLock, false);
 				}
-#endif
 
 				if (stmt->whereClause && stmt->unique && !bdr_permit_unsafe_commands)
 					error_on_persistent_rv(stmt->relation,
@@ -1200,7 +1170,6 @@ bdr_commandfilter(PlannedStmt *pstmt,
 			break;
 
 		case T_DropStmt:
-#if PG_VERSION_NUM >= 90600
 			/*
 			 * DROP INDEX CONCURRENTLY is currently only safe when run outside
 			 * bdr.replicate_ddl_command, and only with
@@ -1224,7 +1193,6 @@ bdr_commandfilter(PlannedStmt *pstmt,
 								 errmsg("DROP INDEX CONCURRENTLY is not supported without bdr.skip_ddl_replication set")));
 				}
 			}
-#endif
 			break;
 
 		case T_RenameStmt:
@@ -1281,19 +1249,11 @@ bdr_commandfilter(PlannedStmt *pstmt,
 		 */
 		case T_CommentStmt:
 		case T_ReassignOwnedStmt:
-#if PG_VERSION_NUM >= 90600
 			lock_type = BDR_LOCK_NOLOCK;
 			break;
-#else
-			goto done;
-#endif
 
 		case T_GrantStmt:
-#if PG_VERSION_NUM >= 90600
 			break;
-#else
-			goto done;
-#endif
 
 		default:
 			/*
@@ -1326,7 +1286,7 @@ bdr_commandfilter(PlannedStmt *pstmt,
 		!bdr_in_extension && !in_bdr_replicate_ddl_command &&
 		bdr_ddl_nestlevel == 0)
 	{
-                if (PG_VERSION_NUM >= 90600 && context != PROCESS_UTILITY_TOPLEVEL)
+                if (context != PROCESS_UTILITY_TOPLEVEL)
                         ereport(ERROR,
                                         (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
                                          errmsg("DDL command attempted inside function or multi-statement string"),
@@ -1353,8 +1313,7 @@ bdr_commandfilter(PlannedStmt *pstmt,
 		//			 errmsg("Direct DDL commands are not supported while BDR is active"),
 		//			 errhint("Use bdr.bdr_replicate_ddl_command(...)")));
 
-                if (PG_VERSION_NUM >= 90600)
-                        bdr_capture_ddl(parsetree, queryString, context, params, dest, CreateCommandName(parsetree));
+                bdr_capture_ddl(parsetree, queryString, context, params, dest, CreateCommandName(parsetree));
 
 		elog(DEBUG3, "DDLREP: Entering level %d DDL block. Toplevel command is %s", bdr_ddl_nestlevel, queryString);
 		incremented_nestlevel = true;
