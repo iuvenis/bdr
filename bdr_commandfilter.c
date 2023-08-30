@@ -479,6 +479,107 @@ filter_CreateTableAs(Node *parsetree)
 		error_unsupported_command(CreateCommandName(parsetree));
 }
 
+/*
+ * Check if the referenced relation appears to be non-permanent. This check
+ * is complicated by the fact that the RangeVar passed to bdr_commandfilter
+ * via the utilityStmt struct does not reliably reflect its persistence level
+ * in the relpersistence field. For example the field seems to be set correctly
+ * for CREATE statements, but for ALTER TABLE statements it is always set to
+ * RELPERSISTENCE_PERMANENT.
+ *
+ * Returns true iff
+ * A: the relpersistence field is != RELPERSISTENCE_PERMANENT, or
+ * B: the schemaname specified in rangeVar refers to the temp namespace, or
+ * C: the first relation found in the search_path matching rangeVar->relname
+ *    lies in the temp namespace (checked only if rangeVar->schemaname is NULL)
+ *
+ * WARNING: this method has not been tested w.r.t. unlogged permanent tables.
+ * For these, it will return true only, if the relpersistence field is set
+ * correctly.
+ */
+static bool
+is_temp_or_unlogged(RangeVar *rangeVar)
+{
+	Oid tempNamespaceOid, foundRelOid;
+	List* searchPath;
+	bool foundTempRelInPath = false;
+
+	/*
+	 * RELPERSISTENCE_PERMANENT tends to be set by default. Unfortunately,
+	 * we cannot always trust relpersistence to have been set to something
+	 * else if the relation is actually temporary, but we will trust it
+	 * if it indeed was set to something non-default
+	 */
+	if (!ispermanent(rangeVar->relpersistence))
+	{
+		elog(DEBUG1, "relation %s is marked as non-permanent",
+					rangeVar->relname);
+		return true;
+	}
+
+	tempNamespaceOid = LookupExplicitNamespace("pg_temp", true);
+
+	/*
+	 * No temporary namespace exists in this session, so it should be safe to assume
+	 * that we are not refering to a temporary relation
+	 */
+	if (tempNamespaceOid == InvalidOid)
+	{
+		elog(DEBUG1, "no temporary namespace found");
+		return false;
+	}
+
+	/*
+	 * The query specified the schema - either it is the temp namespace or not
+	 */
+	if (rangeVar->schemaname != NULL)
+	{
+		Oid nameSpaceOid = get_namespace_oid(rangeVar->schemaname, true);
+		if (!OidIsValid(nameSpaceOid))
+			elog(DEBUG1, "no schema found with name %s", rangeVar->schemaname);
+
+		return nameSpaceOid == tempNamespaceOid;
+	}
+
+	searchPath = fetch_search_path(true);
+	if (searchPath != NULL)
+	{
+		ListCell* i;
+
+		foreach(i, searchPath)
+		{
+			Oid nameSpaceOid = lfirst_oid(i);
+
+			foundRelOid = get_relname_relid(rangeVar->relname, nameSpaceOid);
+			// relation does not exist in this namespace
+			if (foundRelOid == InvalidOid)
+			{
+				// relation does not exist in temp namespace
+				if (nameSpaceOid == tempNamespaceOid)
+				{
+					elog(DEBUG1, "relation %s not found in temp namespace",
+							rangeVar->relname);
+					break;
+				}
+			}
+			// relation exists in this namespace
+			else
+			{
+				foundTempRelInPath = nameSpaceOid == tempNamespaceOid;
+				elog(DEBUG1, "relation %s found in %s namespace",
+						rangeVar->relname,
+						foundTempRelInPath ? "temp" : "non-temp");
+				break;
+			}
+		}
+		list_free(searchPath);
+	}
+	else
+		elog(DEBUG1, "search_path is NULL");
+
+	return foundTempRelInPath;
+}
+
 static bool
 statement_affects_only_nonpermanent(Node *parsetree)
 {
@@ -541,43 +642,18 @@ statement_affects_only_nonpermanent(Node *parsetree)
 						continue;
 
 					/*
-					 * If a schema name is not provided, check to see if the session's
-					 * temporary namespace is first in the search_path and if a relation
-					 * with the same Oid is in the current session's "pg_temp" schema. If
-					 * so, we can safely assume that the DROP statement will refer to this
-					 * object, since the pg_temp schema is session-private.
+					 * The relpersistence field of our self-constructed RangeVar always indicates
+					 * a permanent relation, but we can still identify the relation as temporary
+					 * if the schema is specified as pg_temp, or the first namespace in the
+					 * search_path containing this relation is pg_temp
 					 */
-					if (rv->schemaname == NULL)
-					{
-						Oid tempNamespaceOid, tempRelOid;
-						List* searchPath;
-						bool foundtemprel;
+					if (is_temp_or_unlogged(rv))
+						return true;
 
-						foundtemprel = false;
-						tempNamespaceOid = LookupExplicitNamespace("pg_temp", true);
-						if (tempNamespaceOid == InvalidOid)
-							return false;
-						searchPath = fetch_search_path(true);
-						if (searchPath != NULL)
-						{
-							ListCell* i;
-
-							foreach(i, searchPath)
-							{
-								if (lfirst_oid(i) != tempNamespaceOid)
-									break;
-								tempRelOid = get_relname_relid(rv->relname, tempNamespaceOid);
-								if (tempRelOid != relOid)
-									break;
-								foundtemprel = true;
-								break;
-							}
-							list_free(searchPath);
-						}
-						if (!foundtemprel)
-							return false;
-					}
-
+					/*
+					 * Open the underlying relation to check if its relpersistence field was set
+					 * to anything but permanent
+					 */
 					if (stmt->removeType != OBJECT_INDEX)
 					{
 						rel = relation_open(relOid, AccessExclusiveLock);
@@ -601,6 +677,11 @@ statement_affects_only_nonpermanent(Node *parsetree)
 			{
 				IndexStmt *stmt = (IndexStmt *) parsetree;
 				return !ispermanent(stmt->relation->relpersistence);
+			}
+		case T_AlterTableStmt:
+			{
+				AlterTableStmt *stmt = castNode(AlterTableStmt, parsetree);
+				return is_temp_or_unlogged(stmt->relation);
 			}
 		/* FIXME: Add more types of statements */
 		default:

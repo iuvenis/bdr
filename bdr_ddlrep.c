@@ -248,6 +248,7 @@ bdr_capture_ddl(Node *parsetree, const char *queryString,
                if (!first)
                        appendStringInfoString(&si, ",");
                appendStringInfoString(&si, quote_identifier(nspname));
+	       first = false;
        }
 
        if (tag == NULL)
