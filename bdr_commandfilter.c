@@ -683,6 +683,12 @@ statement_affects_only_nonpermanent(Node *parsetree)
 				AlterTableStmt *stmt = castNode(AlterTableStmt, parsetree);
 				return is_temp_or_unlogged(stmt->relation);
 			}
+		case T_ViewStmt:
+			{
+				ViewStmt *stmt = castNode(ViewStmt, parsetree);
+				/* No harm but also no point in replicating a temp view */
+				return is_temp_or_unlogged(stmt->view);
+			}
 		/* FIXME: Add more types of statements */
 		default:
 			break;
