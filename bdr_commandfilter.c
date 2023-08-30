@@ -676,7 +676,7 @@ statement_affects_only_nonpermanent(Node *parsetree)
 		case T_IndexStmt:
 			{
 				IndexStmt *stmt = (IndexStmt *) parsetree;
-				return !ispermanent(stmt->relation->relpersistence);
+				return is_temp_or_unlogged(stmt->relation);
 			}
 		case T_AlterTableStmt:
 			{
