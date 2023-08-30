@@ -641,7 +641,7 @@ process_remote_insert(StringInfo s)
 
 	estate = CreateExecutorState();
 	newslot = ExecInitExtraTupleSlot(estate, NULL, &TTSOpsHeapTuple);
-	oldslot = ExecInitExtraTupleSlot(estate, NULL, &TTSOpsBufferHeapTuple);
+	oldslot = ExecInitExtraTupleSlot(estate, NULL, table_slot_callbacks(rel->rel));
 	ExecSetSlotDescriptor(newslot, RelationGetDescr(rel->rel));
 	ExecSetSlotDescriptor(oldslot, RelationGetDescr(rel->rel));
 
@@ -933,7 +933,7 @@ process_remote_update(StringInfo s)
 			 action);
 
 	estate = CreateExecutorState();
-	oldslot = ExecInitExtraTupleSlot(estate, NULL, &TTSOpsBufferHeapTuple);
+	oldslot = ExecInitExtraTupleSlot(estate, NULL, table_slot_callbacks(rel->rel));
 	ExecSetSlotDescriptor(oldslot, RelationGetDescr(rel->rel));
 	newslot = ExecInitExtraTupleSlot(estate, NULL, &TTSOpsHeapTuple);
 	ExecSetSlotDescriptor(newslot, RelationGetDescr(rel->rel));
@@ -1203,7 +1203,7 @@ process_remote_delete(StringInfo s)
 	}
 
 	estate = CreateExecutorState();
-	oldslot = ExecInitExtraTupleSlot(estate, NULL, &TTSOpsBufferHeapTuple);
+	oldslot = ExecInitExtraTupleSlot(estate, NULL, table_slot_callbacks(rel->rel));
 	ExecSetSlotDescriptor(oldslot, RelationGetDescr(rel->rel));
 
 	read_tuple_parts(s, rel, &oldtup);
