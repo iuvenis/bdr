@@ -1,14 +1,6 @@
 ###########
 # These instructions are for users who are comfortable compiling from source
-# and who know the command line. They're intended for development and testing.
-# New users should use the packages, or see the more detailed source install
-# instructions in the main documentation.
-#
-# The following instructions are for compiling full BDR, including the patched
-# PostgreSQL.
-#
-# Skip the section for installing PostgreSQL its self if you are installing BDR
-# against PostgreSQL 9.6, where a modified PostgreSQL is not required.
+# and who know the command line.
 ############
 
 # == get dependencies ==
@@ -33,32 +25,20 @@
 #
 # go to directory where you want to place postgres' and bdr's source code, creating it
 # if needed.
-$ mkdir -p ~/src/
-$ cd ~/src/
-# checkout the sourcecode of postgres 9.4 with bdr patches added
-$ git clone -b bdr-pg/REL9_4_STABLE git://git.postgresql.org/git/2ndquadrant_bdr.git postgresql-bdr
+# checkout the sourcecode of postgres
+$ git clone --single-branch --branch REL_15_4 https://github.com/postgres/postgres ~/postgresql-src
 # checkout the sourcecode of the bdr plugin
-$ git clone -b bdr-plugin/next git://git.postgresql.org/git/2ndquadrant_bdr.git bdr-plugin
+$ git clone --single-branch --branch bdr-plugin/REL2_0_DAJU https://github.com/iuvenis/bdr ~/bdr-src
 
-# ==  build postgres ==
-$ cd postgresql-bdr
-$ ./configure --enable-depend --enable-debug --enable-cassert CFLAGS="-fno-omit-frame-pointer" --prefix ~/bin/
-$ make -j4 -s install-world
+# ==  build postgres and required plugins ==
+$ cd ~/postgresql-src
+$ ./configure --enable-depend --enable-debug --enable-cassert CFLAGS="-fno-omit-frame-pointer" --prefix ~/postgresql-build
+$ make -j4 install
+$ cd contrib/btree_gist
+$ make -j4 install
 
 # == build bdr plugin ==
-$ cd ../bdr-plugin
+$ cd ~/bdr-src
 $ ./autogen.sh
-$ PATH=~/bin/bin:$PATH ./configure
-$ make -j4 -s install
-
-
-# == to update later ==
-$ cd ../postgresql-bdr
-$ git pull
-$ make -j4 -s install-world
-
-$ cd ../bdr-plugin
-$ git pull
-$ ./autogen.sh
-$ PATH=~/bin/bin:$PATH ./configure
-$ make -s install
+$ PATH=~/postgresql-build/bin:$PATH ./configure
+$ make -j4 install
