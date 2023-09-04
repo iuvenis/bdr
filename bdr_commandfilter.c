@@ -62,7 +62,7 @@ bool bdr_permit_unsafe_commands = false;
 static void error_unsupported_command(const char *cmdtag);
 
 static int bdr_ddl_nestlevel = 0;
-bool bdr_in_extension = false;
+int bdr_extension_nestlevel = 0;
 
 /*
 * Check the passed rangevar, locking it and looking it up in the cache
@@ -1370,7 +1370,7 @@ bdr_commandfilter(PlannedStmt *pstmt,
 	 * control statements).
 	 */
 	if (!affects_only_nonpermanent && !bdr_skip_ddl_replication &&
-		!bdr_in_extension && !in_bdr_replicate_ddl_command &&
+		bdr_extension_nestlevel == 0 && !in_bdr_replicate_ddl_command &&
 		bdr_ddl_nestlevel == 0)
 	{
                 if (context != PROCESS_UTILITY_TOPLEVEL)
@@ -1431,8 +1431,7 @@ done:
 		case T_CreateExtensionStmt:
 		case T_AlterExtensionStmt:
 		case T_AlterExtensionContentsStmt:
-			Assert(!bdr_in_extension);
-			bdr_in_extension = true;
+			++bdr_extension_nestlevel;
 			entered_extension = true;
 			break;
 		default:
@@ -1466,8 +1465,8 @@ done:
 		/* Error was during extension creation */
 		if (entered_extension)
 		{
-			Assert(bdr_in_extension);
-			bdr_in_extension = false;
+			--bdr_extension_nestlevel;
+			Assert(bdr_extension_nestlevel >= 0);
 		}
 
 		PG_RE_THROW();
@@ -1479,8 +1478,8 @@ done:
 
 	if (entered_extension)
 	{
-		Assert(bdr_in_extension);
-		bdr_in_extension = false;
+		--bdr_extension_nestlevel;
+		Assert(bdr_extension_nestlevel >= 0);
 	}
 
 	if (incremented_nestlevel)

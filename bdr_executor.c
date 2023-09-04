@@ -478,7 +478,7 @@ BdrExecutorStart(QueryDesc *queryDesc, int eflags)
 	 * row apply would fail because the incoming rows would have data for
 	 * dropped column 'baz'.
 	 */
-	if (in_bdr_replicate_ddl_command && !bdr_in_extension)
+	if (in_bdr_replicate_ddl_command && bdr_extension_nestlevel == 0)
 	{
 		if (queryDesc->operation == CMD_INSERT
 		    || queryDesc->operation == CMD_UPDATE
