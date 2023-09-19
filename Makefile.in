@@ -175,7 +175,8 @@ DUMPOBJS = $(BDR_DUMP_DIR)/pg_dump.o \
 	$(BDR_DUMP_DIR)/pg_backup_utils.o \
 	$(BDR_DUMP_DIR)/parallel.o \
 	$(BDR_DUMP_DIR)/compress_io.o \
-	$(BDR_DUMP_DIR)/dumputils.o
+	$(BDR_DUMP_DIR)/dumputils.o \
+	$(BDR_DUMP_DIR)/string_utils.o
 
 BDR_DUMP_DIR := pg_dump
 BDR_DUMP_LIBS := -lz -lpgfeutils
