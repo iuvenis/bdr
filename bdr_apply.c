@@ -742,6 +742,7 @@ process_remote_insert(StringInfo s)
 		HeapTuple	user_tuple = NULL;
 		BdrApplyConflict *apply_conflict = NULL; /* Mute compiler */
 		BdrConflictResolution resolution;
+		bool updateIndices = false;
 
 		get_local_tuple_origin(conflicting_htuple, &local_ts, &local_node_id);
 
@@ -786,11 +787,11 @@ process_remote_insert(StringInfo s)
 				ExecStoreHeapTuple(user_tuple, newslot, true);
 			}
 
-			simple_heap_update(rel->rel,
+			simple_table_tuple_update(rel->rel,
 							   &conflicting_htuple->t_self,
-							   new_htuple);
+							   newslot, InvalidSnapshot, &updateIndices);
 			/* races will be resolved by abort/retry */
-			UserTableUpdateOpenIndexes(estate, relinfo, newslot, true);
+			UserTableUpdateOpenIndexes(estate, relinfo, newslot, updateIndices);
 
 			bdr_count_insert();
 		}
@@ -1120,10 +1121,8 @@ process_remote_update(StringInfo s)
 #ifdef VERBOSE_UPDATE
 			log_tuple("USER tuple:%s", RelationGetDescr(rel->rel), user_tuple);
 #endif
+			simple_heap_insert(rel->rel, user_tuple);
 			ExecStoreHeapTuple(user_tuple, newslot, true);
-			new_htuple = newslot->tts_ops->get_heap_tuple(newslot);
-
-			simple_heap_insert(rel->rel, new_htuple);
 			UserTableUpdateOpenIndexes(estate, relinfo, newslot, false);
 		}
 
