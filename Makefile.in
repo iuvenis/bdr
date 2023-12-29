@@ -187,7 +187,7 @@ RESETXLOG_OBJS := pg_resetxlog/pg_resetwal.o
 RESETXLOG_LIBS := -lpgfeutils
 
 bdr_resetxlog: $(RESETXLOG_OBJS)
-	$(CC) $(CFLAGS) $(RESETXLOG_OBJS) $(libpq_pgport) $(LDFLAGS) $(LDFLAGS_EX) -o $@$(X)
+	$(CC) $(CFLAGS) $(RESETXLOG_OBJS) $(LIBS) $(libpq_pgport) $(LDFLAGS) $(LDFLAGS_EX) -o $@$(X)
 
 # Ensure Makefiles are up2date (should we move this to Makefile.global?)
 Makefile: Makefile.in config.status configure
@@ -211,7 +211,7 @@ bdr_version.h: bdr_version.h.in
 bdr.o: bdr_version.h
 
 bdr_init_copy: bdr_init_copy.o bdr_common.o bdr_pgutils.o
-	$(CC) $(CFLAGS) $^ $(LDFLAGS) $(LDFLAGS_EX) $(libpq_pgport) -o $@$(X)
+	$(CC) $(CFLAGS) $^ $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) $(libpq_pgport) -o $@$(X)
 
 scripts/bdr_initial_load: scripts/bdr_initial_load.in
 	@mkdir -p $(shell dirname $@)
@@ -247,7 +247,7 @@ $(eval $(call genextfile,2.0.5.0,2.0.6.0))
 $(eval $(call genextfile,2.0.6.0,2.0.7.0))
 
 bdr_dump: $(DUMPOBJS)
-	$(CC) $(CFLAGS) $(DUMPOBJS) $(libpq_pgport) $(LDFLAGS) $(LDFLAGS_EX) $(BDR_DUMP_LIBS) -o $@$(X)
+	$(CC) $(CFLAGS) $(DUMPOBJS) $(LIBS) $(libpq_pgport) $(LDFLAGS) $(LDFLAGS_EX) $(BDR_DUMP_LIBS) -o $@$(X)
 
 doc:
 	$(MAKE) -C doc all
