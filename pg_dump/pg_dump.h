@@ -3,7 +3,7 @@
  * pg_dump.h
  *	  Common header file for the pg_dump utility
  *
- * Portions Copyright (c) 1996-2022, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2023, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/bin/pg_dump/pg_dump.h
@@ -72,8 +72,8 @@ typedef enum
 	DO_FOREIGN_SERVER,
 	DO_DEFAULT_ACL,
 	DO_TRANSFORM,
-	DO_BLOB,
-	DO_BLOB_DATA,
+	DO_LARGE_OBJECT,
+	DO_LARGE_OBJECT_DATA,
 	DO_PRE_DATA_BOUNDARY,
 	DO_POST_DATA_BOUNDARY,
 	DO_EVENT_TRIGGER,
@@ -321,6 +321,9 @@ typedef struct _tableInfo
 	bool		ispartition;	/* is table a partition? */
 	bool		unsafe_partitions;	/* is it an unsafe partitioned table? */
 
+	int			numParents;		/* number of (immediate) parent tables */
+	struct _tableInfo **parents;	/* TableInfos of immediate parents */
+
 	/*
 	 * These fields are computed only if we decide the table is interesting
 	 * (it's either a table to dump, or a direct parent of a dumpable table).
@@ -328,7 +331,6 @@ typedef struct _tableInfo
 	int			numatts;		/* number of attributes */
 	char	  **attnames;		/* the attribute names */
 	char	  **atttypnames;	/* attribute type names */
-	int		   *atttypmod;		/* type-specific type modifiers */
 	int		   *attstattarget;	/* attribute statistics targets */
 	char	   *attstorage;		/* attribute storage scheme */
 	char	   *typstorage;		/* type storage scheme */
@@ -353,8 +355,6 @@ typedef struct _tableInfo
 	/*
 	 * Stuff computed only for dumpable tables.
 	 */
-	int			numParents;		/* number of (immediate) parent tables */
-	struct _tableInfo **parents;	/* TableInfos of immediate parents */
 	int			numIndexes;		/* number of indexes */
 	struct _indxInfo *indexes;	/* indexes */
 	struct _tableDataInfo *dataObj; /* TableDataInfo, if dumping its data */
@@ -418,7 +418,8 @@ typedef struct _indexAttachInfo
 typedef struct _statsExtInfo
 {
 	DumpableObject dobj;
-	const char *rolname;
+	const char *rolname;		/* owner */
+	TableInfo  *stattable;		/* link to table the stats are for */
 	int			stattarget;		/* statistics target */
 } StatsExtInfo;
 
@@ -584,12 +585,12 @@ typedef struct _defaultACLInfo
 	char		defaclobjtype;
 } DefaultACLInfo;
 
-typedef struct _blobInfo
+typedef struct _loInfo
 {
 	DumpableObject dobj;
 	DumpableAcl dacl;
 	const char *rolname;
-} BlobInfo;
+} LoInfo;
 
 /*
  * The PolicyInfo struct is used to represent policies on a table and
@@ -655,14 +656,17 @@ typedef struct _SubscriptionInfo
 {
 	DumpableObject dobj;
 	const char *rolname;
-	char	   *subconninfo;
-	char	   *subslotname;
 	char	   *subbinary;
 	char	   *substream;
 	char	   *subtwophasestate;
 	char	   *subdisableonerr;
+	char	   *subpasswordrequired;
+	char	   *subrunasowner;
+	char	   *subconninfo;
+	char	   *subslotname;
 	char	   *subsynccommit;
 	char	   *subpublications;
+	char	   *suborigin;
 } SubscriptionInfo;
 
 /*
@@ -706,8 +710,8 @@ extern NamespaceInfo *getNamespaces(Archive *fout, int *numNamespaces);
 extern ExtensionInfo *getExtensions(Archive *fout, int *numExtensions);
 extern TypeInfo *getTypes(Archive *fout, int *numTypes);
 extern FuncInfo *getFuncs(Archive *fout, int *numFuncs);
-extern AggInfo *getAggregates(Archive *fout, int *numAggregates);
-extern OprInfo *getOperators(Archive *fout, int *numOperators);
+extern AggInfo *getAggregates(Archive *fout, int *numAggs);
+extern OprInfo *getOperators(Archive *fout, int *numOprs);
 extern AccessMethodInfo *getAccessMethods(Archive *fout, int *numAccessMethods);
 extern OpclassInfo *getOpclasses(Archive *fout, int *numOpclasses);
 extern OpfamilyInfo *getOpfamilies(Archive *fout, int *numOpfamilies);
@@ -725,7 +729,7 @@ extern void getTriggers(Archive *fout, TableInfo tblinfo[], int numTables);
 extern ProcLangInfo *getProcLangs(Archive *fout, int *numProcLangs);
 extern CastInfo *getCasts(Archive *fout, int *numCasts);
 extern TransformInfo *getTransforms(Archive *fout, int *numTransforms);
-extern void getTableAttrs(Archive *fout, TableInfo *tbinfo, int numTables);
+extern void getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables);
 extern bool shouldPrintColumn(const DumpOptions *dopt, const TableInfo *tbinfo, int colno);
 extern TSParserInfo *getTSParsers(Archive *fout, int *numTSParsers);
 extern TSDictInfo *getTSDictionaries(Archive *fout, int *numTSDicts);
