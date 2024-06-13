@@ -1766,7 +1766,7 @@ oper_typeStringToTypeName(const char *str)
 	if (pg_strcasecmp(str, "none") == 0)
 		return NULL;
 	else
-		return typeStringToTypeName(str);
+		return typeStringToTypeName(str, NULL);
 }
 
 static HeapTuple
@@ -1870,7 +1870,7 @@ process_queued_drop(HeapTuple cmdtup)
 							  &values, &nulls, &nelems);
 
 			typestring = TextDatumGetCString(values[0]);
-			typeName = typeStringToTypeName(typestring);
+			typeName = typeStringToTypeName(typestring, NULL);
 			objnames = typeName->names;
 		}
 		else if (objtype == OBJECT_FUNCTION ||
@@ -1920,7 +1920,7 @@ process_queued_drop(HeapTuple cmdtup)
 					typestring = TextDatumGetCString(values[i]);
 					objargs = lappend(objargs, objtype == OBJECT_OPERATOR ?
 									  oper_typeStringToTypeName(typestring) :
-									  typeStringToTypeName(typestring));
+									  typeStringToTypeName(typestring, NULL));
 				}
 			}
 		}
@@ -3026,7 +3026,7 @@ bdr_apply_main(Datum main_arg)
 	 * tell replication_identifier.c about our identifier so it can cache the
 	 * search in shared memory.
 	 */
-	replorigin_session_setup(replication_identifier);
+	replorigin_session_setup(replication_identifier, 0);
 
 	/*
 	 * Check whether we already replayed something so we don't replay it
