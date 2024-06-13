@@ -47,7 +47,7 @@ bdr_object_relabel(const ObjectAddress *object, const char *seclabel)
 	{
 		case RelationRelationId:
 
-			if (!pg_class_ownercheck(object->objectId, GetUserId()))
+			if (!object_ownercheck(RelationRelationId, object->objectId, GetUserId()))
 				aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_TABLE,
 							   get_rel_name(object->objectId));
 

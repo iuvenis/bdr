@@ -23,6 +23,7 @@
 #include "catalog/dependency.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_enum.h"
+#include "catalog/pg_namespace.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_type.h"
 
@@ -127,8 +128,8 @@ bdr_conflict_handlers_check_access(Oid reloid)
 
 	classform = (Form_pg_class) GETSTRUCT(tuple);
 
-	if (!pg_class_ownercheck(reloid, GetUserId()) &&
-		!pg_namespace_ownercheck(classform->relnamespace, GetUserId()))
+	if (!object_ownercheck(RelationRelationId, reloid, GetUserId()) &&
+		!object_ownercheck(NamespaceRelationId, classform->relnamespace, GetUserId()))
 		ereport(ERROR,
 				(errmsg("permission denied to relation %s",
 						NameStr(classform->relname))));
