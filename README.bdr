@@ -1,8 +1,8 @@
-A port of BDR2 to PG15. Tested with version 15.4. Based on keenser's port of BDR2 to PG11.
+A port of BDR2 to PG16. Tested with version 16.3. Based on keenser's port of BDR2 to PG11.
 
 See INSTALL.src for compilation instructions.
 
-In porting to PG15 I did not invest any effort in maintaining compatibility with lower PG versions. This branch of BDR2 will most likely not work with PG versions <13 and possibly not with <15. If I decide to port BDR2 to newer versions of PG in the future, I will most likely do so in a separate branch.
+In porting to PG16 I did not invest any effort in maintaining compatibility with lower PG versions. In an intermediate stage I have ported to PG15.5 and tested quite extensively with that version. The git tag postgres15.5 points to the last commit compatible with PG15.5 before porting to PG16.3.
 
 Any comments or even pull requests with bug fixes or improvements are more than welcome.
 
