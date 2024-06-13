@@ -87,7 +87,7 @@ bool bdr_skip_ddl_locking;
 bool bdr_do_not_replicate;
 bool bdr_discard_mismatched_row_attributes;
 bool bdr_trace_replay;
-int bdr_trace_ddl_locks_level;
+int bdr_trace_ddl_locks_level = DDL_LOCK_TRACE_STATEMENT;
 char *bdr_extra_apply_connection_options;
 bool bdr_enabled;
 bool bdr_check_lsn_mismatch;
