@@ -179,6 +179,10 @@ DUMPOBJS = $(BDR_DUMP_DIR)/pg_dump.o \
 	$(BDR_DUMP_DIR)/pg_backup_utils.o \
 	$(BDR_DUMP_DIR)/parallel.o \
 	$(BDR_DUMP_DIR)/compress_io.o \
+	$(BDR_DUMP_DIR)/compress_none.o \
+	$(BDR_DUMP_DIR)/compress_zstd.o \
+	$(BDR_DUMP_DIR)/compress_gzip.o \
+	$(BDR_DUMP_DIR)/compress_lz4.o \
 	$(BDR_DUMP_DIR)/dumputils.o \
 	$(BDR_DUMP_DIR)/string_utils.o
 
