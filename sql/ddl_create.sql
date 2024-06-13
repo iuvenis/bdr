@@ -289,30 +289,20 @@ CREATE OPERATOR @#@ (
    procedure = factorial
 );
 
-CREATE OPERATOR #@# (
-   leftarg = int8,		-- right unary
-   procedure = factorial
-);
-
 SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 \do public.##
 \do public.@#@
-\do public.#@#
 \c regression
 \do public.##
 \do public.@#@
-\do public.#@#
 
 DROP OPERATOR ##(path, path);
 DROP OPERATOR @#@(none,int8);
-DROP OPERATOR #@#(int8,none);
 
 \do public.##
 \do public.@#@
-\do public.#@#
 
 SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 \c postgres
 \do public.##
 \do public.@#@
-\do public.#@#
