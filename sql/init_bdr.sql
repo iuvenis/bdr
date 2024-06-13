@@ -4,7 +4,7 @@ SELECT bdr.bdr_is_active_in_db();
 
 SELECT bdr.bdr_group_create(
 	local_node_name := 'node-pg',
-	node_external_dsn := 'dbname=postgres',
+	node_external_dsn := 'dbname=postgres user=postgres',
 	replication_sets := ARRAY['default', 'important', 'for-node-1']
 	);
 
@@ -20,9 +20,9 @@ SELECT bdr.bdr_is_active_in_db();
 
 SELECT bdr.bdr_group_join(
 	local_node_name := 'node-regression',
-	node_external_dsn := 'dbname=regression',
-	join_using_dsn := 'dbname=postgres',
-	node_local_dsn := 'dbname=regression',
+	node_external_dsn := 'dbname=regression user=postgres',
+	join_using_dsn := 'dbname=postgres user=postgres',
+	node_local_dsn := 'dbname=regression user=postgres',
 	replication_sets := ARRAY['default', 'important', 'for-node-2', 'for-node-2-insert', 'for-node-2-update', 'for-node-2-delete']
 	);
 

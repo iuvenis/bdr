@@ -16,28 +16,28 @@ SELECT
 	version_num = bdr.bdr_version_num(),
 	min_remote_version_num = bdr.bdr_min_remote_version_num(),
 	is_superuser = 't'
-FROM bdr.bdr_get_remote_nodeinfo('dbname=regression') r,
+FROM bdr.bdr_get_remote_nodeinfo('dbname=regression user=postgres') r,
      bdr.bdr_get_local_nodeid() l;
 
 -- bdr.bdr_get_remote_nodeinfo can also be used to probe the local dsn
 -- and make sure it works.
 SELECT
     r.dboid = (SELECT oid FROM pg_database WHERE datname = current_database())
-FROM bdr.bdr_get_remote_nodeinfo('dbname='||current_database()) r;
+FROM bdr.bdr_get_remote_nodeinfo('dbname='||current_database()||' user=postgres') r;
 
 -- Test probing for replication connection
 SELECT
 	r.sysid = l.sysid,
 	r.timeline = l.timeline,
 	r.dboid = (SELECT oid FROM pg_database WHERE datname = 'regression')
-FROM bdr.bdr_test_replication_connection('dbname=regression') r,
+FROM bdr.bdr_test_replication_connection('dbname=regression user=postgres') r,
      bdr.bdr_get_local_nodeid() l;
 
 -- Probing replication connection for the local dsn will work too
 -- even though the identifier is the same.
 SELECT
 	r.dboid = (SELECT oid FROM pg_database WHERE datname = current_database())
-FROM bdr.bdr_test_replication_connection('dbname='||current_database()) r;
+FROM bdr.bdr_test_replication_connection('dbname='||current_database()||' user=postgres') r;
 
 -- Verify that parsing slot names then formatting them again produces round-trip
 -- output.
