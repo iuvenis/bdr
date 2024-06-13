@@ -76,19 +76,19 @@ bdr_create_result_rel_info(Relation rel)
 }
 
 void
-UserTableUpdateIndexes(EState *estate, ResultRelInfo *resultRelInfo, TupleTableSlot *slot, bool update)
+UserTableUpdateIndexes(EState *estate, ResultRelInfo *resultRelInfo, TupleTableSlot *slot, bool update, bool onlySummarizing)
 {
 	/* HOT update does not require index inserts */
 	if (HeapTupleIsHeapOnly(((HeapTupleTableSlot *) slot)->tuple))
 		return;
 
 	ExecOpenIndices(resultRelInfo, false);
-	UserTableUpdateOpenIndexes(estate, resultRelInfo, slot, update);
+	UserTableUpdateOpenIndexes(estate, resultRelInfo, slot, update, onlySummarizing);
 	ExecCloseIndices(resultRelInfo);
 }
 
 void
-UserTableUpdateOpenIndexes(EState *estate, ResultRelInfo *resultRelInfo, TupleTableSlot *slot, bool update)
+UserTableUpdateOpenIndexes(EState *estate, ResultRelInfo *resultRelInfo, TupleTableSlot *slot, bool update, bool onlySummarizing)
 {
 	List	   *recheckIndexes = NIL;
 	HeapTuple   tuple = ((HeapTupleTableSlot *) slot)->tuple;
@@ -100,10 +100,13 @@ UserTableUpdateOpenIndexes(EState *estate, ResultRelInfo *resultRelInfo, TupleTa
 	if (resultRelInfo->ri_NumIndices > 0)
 	{
 		recheckIndexes = ExecInsertIndexTuples(resultRelInfo,
-											   		 slot,
-											   		 estate,
-													 update,
-													 false, NULL, NIL);
+									slot,
+									estate,
+									update,
+									false,
+									NULL,
+									NIL,
+									onlySummarizing);
 
 		if (recheckIndexes != NIL)
 			ereport(ERROR,

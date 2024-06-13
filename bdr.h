@@ -473,10 +473,12 @@ extern RepOriginId bdr_fetch_node_id_via_sysid(const BDRNodeId * const node);
 extern ResultRelInfo * bdr_create_result_rel_info(Relation rel);
 extern void UserTableUpdateIndexes(struct EState *estate, struct ResultRelInfo *resultRelInfo,
 								   struct TupleTableSlot *slot,
-								   bool update);
+								   bool update,
+								   bool onlySummarizing);
 extern void UserTableUpdateOpenIndexes(struct EState *estate, struct ResultRelInfo *resultRelInfo,
 									   struct TupleTableSlot *slot,
-									   bool update);
+									   bool update,
+									   bool onlySummarizing);
 extern void build_index_scan_keys(ResultRelInfo *relInfo,
 								  struct ScanKeyData **scan_keys,
 								  BDRTupleData *tup);

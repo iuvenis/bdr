@@ -87,7 +87,7 @@ bdr_queue_ddl_command(const char *command_tag, const char *command, const char *
 	newtup = heap_form_tuple(RelationGetDescr(queuedcmds), values, nulls);
 	simple_heap_insert(queuedcmds, newtup);
 	ExecStoreHeapTuple(newtup, slot, false);
-	UserTableUpdateOpenIndexes(estate, relinfo, slot, false);
+	UserTableUpdateOpenIndexes(estate, relinfo, slot, false, false);
 
 	ExecCloseIndices(relinfo);
 	ExecDropSingleTupleTableSlot(slot);
