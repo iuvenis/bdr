@@ -58,7 +58,7 @@ bdr_object_relabel(const ObjectAddress *object, const char *seclabel)
 			break;
 		case DatabaseRelationId:
 
-			if (!pg_database_ownercheck(object->objectId, GetUserId()))
+			if (!object_ownercheck(DatabaseRelationId, object->objectId, GetUserId()))
 						aclcheck_error(ACLCHECK_NOT_OWNER, ACL_ALL_RIGHTS_DATABASE,
 											   get_database_name(object->objectId));
 
