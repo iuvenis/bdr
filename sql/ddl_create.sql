@@ -14,12 +14,12 @@ CREATE UNLOGGED TABLE test_tbl_unlogged_create(val int);
 SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 \d+ test_tbl_unlogged_create
 \c postgres
+-- Should not exist because unlogged tables are excluded from replication
 \d+ test_tbl_unlogged_create
 
+\c regression
 DROP TABLE test_tbl_unlogged_create;
 SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
-\d+ test_tbl_unlogged_create
-\c regression
 \d+ test_tbl_unlogged_create
 
 CREATE TABLE test_tbl_simple_pk(val int PRIMARY KEY);
@@ -105,12 +105,14 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 \d+ test_tbl_create_index
 
 DROP INDEX test1_idx;
+-- Should fail because BDR2 does not support concurrent index operations
 DROP INDEX CONCURRENTLY test2_idx;
 SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 \d+ test_tbl_create_index
 \c postgres
 \d+ test_tbl_create_index
 
+-- Should both fail because BDR2 does not support concurrent index operations
 CREATE INDEX CONCURRENTLY test1_idx ON test_tbl_create_index(val, val2);
 CREATE UNIQUE INDEX CONCURRENTLY test2_idx ON test_tbl_create_index (lower(val2::text));
 SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
@@ -118,6 +120,7 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 \c regression
 \d+ test_tbl_create_index
 
+-- Should both fail because BDR2 does not support concurrent index operations
 DROP INDEX CONCURRENTLY test1_idx;
 DROP INDEX CONCURRENTLY test2_idx;
 DROP TABLE test_tbl_create_index;

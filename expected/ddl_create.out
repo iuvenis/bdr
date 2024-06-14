@@ -6,17 +6,17 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 (1 row)
 
 \d+ test_tbl_simple_create
-                Table "public.test_tbl_simple_create"
- Column |  Type   | Modifiers | Storage | Stats target | Description 
---------+---------+-----------+---------+--------------+-------------
- val    | integer |           | plain   |              | 
+                          Table "public.test_tbl_simple_create"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ val    | integer |           |          |         | plain   |              | 
 
 \c postgres
 \d+ test_tbl_simple_create
-                Table "public.test_tbl_simple_create"
- Column |  Type   | Modifiers | Storage | Stats target | Description 
---------+---------+-----------+---------+--------------+-------------
- val    | integer |           | plain   |              | 
+                          Table "public.test_tbl_simple_create"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ val    | integer |           |          |         | plain   |              | 
 
 DROP TABLE test_tbl_simple_create;
 SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
@@ -36,18 +36,15 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 (1 row)
 
 \d+ test_tbl_unlogged_create
-          Unlogged table "public.test_tbl_unlogged_create"
- Column |  Type   | Modifiers | Storage | Stats target | Description 
---------+---------+-----------+---------+--------------+-------------
- val    | integer |           | plain   |              | 
+                     Unlogged table "public.test_tbl_unlogged_create"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ val    | integer |           |          |         | plain   |              | 
 
 \c postgres
+-- Should not exist because unlogged tables are excluded from replication
 \d+ test_tbl_unlogged_create
-          Unlogged table "public.test_tbl_unlogged_create"
- Column |  Type   | Modifiers | Storage | Stats target | Description 
---------+---------+-----------+---------+--------------+-------------
- val    | integer |           | plain   |              | 
-
+\c regression
 DROP TABLE test_tbl_unlogged_create;
 SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
  wait_slot_confirm_lsn 
@@ -55,8 +52,6 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
  
 (1 row)
 
-\d+ test_tbl_unlogged_create
-\c regression
 \d+ test_tbl_unlogged_create
 CREATE TABLE test_tbl_simple_pk(val int PRIMARY KEY);
 SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
@@ -66,19 +61,19 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 (1 row)
 
 \d+ test_tbl_simple_pk
-                  Table "public.test_tbl_simple_pk"
- Column |  Type   | Modifiers | Storage | Stats target | Description 
---------+---------+-----------+---------+--------------+-------------
- val    | integer | not null  | plain   |              | 
+                            Table "public.test_tbl_simple_pk"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ val    | integer |           | not null |         | plain   |              | 
 Indexes:
     "test_tbl_simple_pk_pkey" PRIMARY KEY, btree (val)
 
 \c postgres
 \d+ test_tbl_simple_pk
-                  Table "public.test_tbl_simple_pk"
- Column |  Type   | Modifiers | Storage | Stats target | Description 
---------+---------+-----------+---------+--------------+-------------
- val    | integer | not null  | plain   |              | 
+                            Table "public.test_tbl_simple_pk"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ val    | integer |           | not null |         | plain   |              | 
 Indexes:
     "test_tbl_simple_pk_pkey" PRIMARY KEY, btree (val)
 
@@ -100,21 +95,21 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 (1 row)
 
 \d+ test_tbl_combined_pk
-                 Table "public.test_tbl_combined_pk"
- Column |  Type   | Modifiers | Storage | Stats target | Description 
---------+---------+-----------+---------+--------------+-------------
- val    | integer | not null  | plain   |              | 
- val1   | integer | not null  | plain   |              | 
+                           Table "public.test_tbl_combined_pk"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ val    | integer |           | not null |         | plain   |              | 
+ val1   | integer |           | not null |         | plain   |              | 
 Indexes:
     "test_tbl_combined_pk_pkey" PRIMARY KEY, btree (val, val1)
 
 \c postgres
 \d+ test_tbl_combined_pk
-                 Table "public.test_tbl_combined_pk"
- Column |  Type   | Modifiers | Storage | Stats target | Description 
---------+---------+-----------+---------+--------------+-------------
- val    | integer | not null  | plain   |              | 
- val1   | integer | not null  | plain   |              | 
+                           Table "public.test_tbl_combined_pk"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ val    | integer |           | not null |         | plain   |              | 
+ val1   | integer |           | not null |         | plain   |              | 
 Indexes:
     "test_tbl_combined_pk_pkey" PRIMARY KEY, btree (val, val1)
 
@@ -136,17 +131,17 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 (1 row)
 
 \d+ test_tbl_serial
-                                             Table "public.test_tbl_serial"
- Column |  Type   |                           Modifiers                           | Storage | Stats target | Description 
---------+---------+---------------------------------------------------------------+---------+--------------+-------------
- val    | integer | not null default nextval('test_tbl_serial_val_seq'::regclass) | plain   |              | 
+                                                Table "public.test_tbl_serial"
+ Column |  Type   | Collation | Nullable |                   Default                    | Storage | Stats target | Description 
+--------+---------+-----------+----------+----------------------------------------------+---------+--------------+-------------
+ val    | integer |           | not null | nextval('test_tbl_serial_val_seq'::regclass) | plain   |              | 
 
 \c postgres
 \d+ test_tbl_serial
-                                             Table "public.test_tbl_serial"
- Column |  Type   |                           Modifiers                           | Storage | Stats target | Description 
---------+---------+---------------------------------------------------------------+---------+--------------+-------------
- val    | integer | not null default nextval('test_tbl_serial_val_seq'::regclass) | plain   |              | 
+                                                Table "public.test_tbl_serial"
+ Column |  Type   | Collation | Nullable |                   Default                    | Storage | Stats target | Description 
+--------+---------+-----------+----------+----------------------------------------------+---------+--------------+-------------
+ val    | integer |           | not null | nextval('test_tbl_serial_val_seq'::regclass) | plain   |              | 
 
 DROP TABLE test_tbl_serial;
 SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
@@ -166,17 +161,17 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 (1 row)
 
 \d+ test_tbl_serial
-                                             Table "public.test_tbl_serial"
- Column |  Type   |                           Modifiers                           | Storage | Stats target | Description 
---------+---------+---------------------------------------------------------------+---------+--------------+-------------
- val    | integer | not null default nextval('test_tbl_serial_val_seq'::regclass) | plain   |              | 
+                                                Table "public.test_tbl_serial"
+ Column |  Type   | Collation | Nullable |                   Default                    | Storage | Stats target | Description 
+--------+---------+-----------+----------+----------------------------------------------+---------+--------------+-------------
+ val    | integer |           | not null | nextval('test_tbl_serial_val_seq'::regclass) | plain   |              | 
 
 \c postgres
 \d+ test_tbl_serial
-                                             Table "public.test_tbl_serial"
- Column |  Type   |                           Modifiers                           | Storage | Stats target | Description 
---------+---------+---------------------------------------------------------------+---------+--------------+-------------
- val    | integer | not null default nextval('test_tbl_serial_val_seq'::regclass) | plain   |              | 
+                                                Table "public.test_tbl_serial"
+ Column |  Type   | Collation | Nullable |                   Default                    | Storage | Stats target | Description 
+--------+---------+-----------+----------+----------------------------------------------+---------+--------------+-------------
+ val    | integer |           | not null | nextval('test_tbl_serial_val_seq'::regclass) | plain   |              | 
 
 CREATE TABLE test_tbl_serial_pk(val SERIAL PRIMARY KEY);
 SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
@@ -186,19 +181,19 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 (1 row)
 
 \d+ test_tbl_serial_pk
-                                             Table "public.test_tbl_serial_pk"
- Column |  Type   |                            Modifiers                             | Storage | Stats target | Description 
---------+---------+------------------------------------------------------------------+---------+--------------+-------------
- val    | integer | not null default nextval('test_tbl_serial_pk_val_seq'::regclass) | plain   |              | 
+                                                Table "public.test_tbl_serial_pk"
+ Column |  Type   | Collation | Nullable |                     Default                     | Storage | Stats target | Description 
+--------+---------+-----------+----------+-------------------------------------------------+---------+--------------+-------------
+ val    | integer |           | not null | nextval('test_tbl_serial_pk_val_seq'::regclass) | plain   |              | 
 Indexes:
     "test_tbl_serial_pk_pkey" PRIMARY KEY, btree (val)
 
 \c postgres
 \d+ test_tbl_serial_pk
-                                             Table "public.test_tbl_serial_pk"
- Column |  Type   |                            Modifiers                             | Storage | Stats target | Description 
---------+---------+------------------------------------------------------------------+---------+--------------+-------------
- val    | integer | not null default nextval('test_tbl_serial_pk_val_seq'::regclass) | plain   |              | 
+                                                Table "public.test_tbl_serial_pk"
+ Column |  Type   | Collation | Nullable |                     Default                     | Storage | Stats target | Description 
+--------+---------+-----------+----------+-------------------------------------------------+---------+--------------+-------------
+ val    | integer |           | not null | nextval('test_tbl_serial_pk_val_seq'::regclass) | plain   |              | 
 Indexes:
     "test_tbl_serial_pk_pkey" PRIMARY KEY, btree (val)
 
@@ -220,21 +215,21 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 (1 row)
 
 \d+ test_tbl_serial_combined_pk
-                                             Table "public.test_tbl_serial_combined_pk"
- Column |  Type   |                                 Modifiers                                 | Storage | Stats target | Description 
---------+---------+---------------------------------------------------------------------------+---------+--------------+-------------
- val    | integer | not null default nextval('test_tbl_serial_combined_pk_val_seq'::regclass) | plain   |              | 
- val1   | integer | not null                                                                  | plain   |              | 
+                                                Table "public.test_tbl_serial_combined_pk"
+ Column |  Type   | Collation | Nullable |                         Default                          | Storage | Stats target | Description 
+--------+---------+-----------+----------+----------------------------------------------------------+---------+--------------+-------------
+ val    | integer |           | not null | nextval('test_tbl_serial_combined_pk_val_seq'::regclass) | plain   |              | 
+ val1   | integer |           | not null |                                                          | plain   |              | 
 Indexes:
     "test_tbl_serial_combined_pk_pkey" PRIMARY KEY, btree (val, val1)
 
 \c postgres
 \d+ test_tbl_serial_combined_pk
-                                             Table "public.test_tbl_serial_combined_pk"
- Column |  Type   |                                 Modifiers                                 | Storage | Stats target | Description 
---------+---------+---------------------------------------------------------------------------+---------+--------------+-------------
- val    | integer | not null default nextval('test_tbl_serial_combined_pk_val_seq'::regclass) | plain   |              | 
- val1   | integer | not null                                                                  | plain   |              | 
+                                                Table "public.test_tbl_serial_combined_pk"
+ Column |  Type   | Collation | Nullable |                         Default                          | Storage | Stats target | Description 
+--------+---------+-----------+----------+----------------------------------------------------------+---------+--------------+-------------
+ val    | integer |           | not null | nextval('test_tbl_serial_combined_pk_val_seq'::regclass) | plain   |              | 
+ val1   | integer |           | not null |                                                          | plain   |              | 
 Indexes:
     "test_tbl_serial_combined_pk_pkey" PRIMARY KEY, btree (val, val1)
 
@@ -248,22 +243,22 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 (1 row)
 
 \d+ test_tbl_create_index
-                Table "public.test_tbl_create_index"
- Column |  Type   | Modifiers | Storage | Stats target | Description 
---------+---------+-----------+---------+--------------+-------------
- val    | integer |           | plain   |              | 
- val2   | integer |           | plain   |              | 
+                           Table "public.test_tbl_create_index"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ val    | integer |           |          |         | plain   |              | 
+ val2   | integer |           |          |         | plain   |              | 
 Indexes:
     "test1_idx" UNIQUE, btree (val)
     "test2_idx" btree (lower(val2::text))
 
 \c regression
 \d+ test_tbl_create_index
-                Table "public.test_tbl_create_index"
- Column |  Type   | Modifiers | Storage | Stats target | Description 
---------+---------+-----------+---------+--------------+-------------
- val    | integer |           | plain   |              | 
- val2   | integer |           | plain   |              | 
+                           Table "public.test_tbl_create_index"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ val    | integer |           |          |         | plain   |              | 
+ val2   | integer |           |          |         | plain   |              | 
 Indexes:
     "test1_idx" UNIQUE, btree (val)
     "test2_idx" btree (lower(val2::text))
@@ -277,19 +272,19 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 (1 row)
 
 \d+ test_tbl_create_index
-                Table "public.test_tbl_create_index"
- Column |  Type   | Modifiers | Storage | Stats target | Description 
---------+---------+-----------+---------+--------------+-------------
- val    | integer |           | plain   |              | 
- val2   | integer |           | plain   |              | 
+                           Table "public.test_tbl_create_index"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ val    | integer |           |          |         | plain   |              | 
+ val2   | integer |           |          |         | plain   |              | 
 
 \c postgres
 \d+ test_tbl_create_index
-                Table "public.test_tbl_create_index"
- Column |  Type   | Modifiers | Storage | Stats target | Description 
---------+---------+-----------+---------+--------------+-------------
- val    | integer |           | plain   |              | 
- val2   | integer |           | plain   |              | 
+                           Table "public.test_tbl_create_index"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ val    | integer |           |          |         | plain   |              | 
+ val2   | integer |           |          |         | plain   |              | 
 
 CREATE INDEX test1_idx ON test_tbl_create_index(val, val2);
 CREATE INDEX test2_idx ON test_tbl_create_index USING gist (val, UPPER(val2::text));
@@ -300,28 +295,30 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 (1 row)
 
 \d+ test_tbl_create_index
-                Table "public.test_tbl_create_index"
- Column |  Type   | Modifiers | Storage | Stats target | Description 
---------+---------+-----------+---------+--------------+-------------
- val    | integer |           | plain   |              | 
- val2   | integer |           | plain   |              | 
+                           Table "public.test_tbl_create_index"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ val    | integer |           |          |         | plain   |              | 
+ val2   | integer |           |          |         | plain   |              | 
 Indexes:
     "test1_idx" btree (val, val2)
     "test2_idx" gist (val, upper(val2::text))
 
 \c regression
 \d+ test_tbl_create_index
-                Table "public.test_tbl_create_index"
- Column |  Type   | Modifiers | Storage | Stats target | Description 
---------+---------+-----------+---------+--------------+-------------
- val    | integer |           | plain   |              | 
- val2   | integer |           | plain   |              | 
+                           Table "public.test_tbl_create_index"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ val    | integer |           |          |         | plain   |              | 
+ val2   | integer |           |          |         | plain   |              | 
 Indexes:
     "test1_idx" btree (val, val2)
     "test2_idx" gist (val, upper(val2::text))
 
 DROP INDEX test1_idx;
+-- Should fail because BDR2 does not support concurrent index operations
 DROP INDEX CONCURRENTLY test2_idx;
+ERROR:  DROP INDEX CONCURRENTLY is not supported without bdr.skip_ddl_replication set
 SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
  wait_slot_confirm_lsn 
 -----------------------
@@ -329,22 +326,29 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 (1 row)
 
 \d+ test_tbl_create_index
-                Table "public.test_tbl_create_index"
- Column |  Type   | Modifiers | Storage | Stats target | Description 
---------+---------+-----------+---------+--------------+-------------
- val    | integer |           | plain   |              | 
- val2   | integer |           | plain   |              | 
+                           Table "public.test_tbl_create_index"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ val    | integer |           |          |         | plain   |              | 
+ val2   | integer |           |          |         | plain   |              | 
+Indexes:
+    "test2_idx" gist (val, upper(val2::text))
 
 \c postgres
 \d+ test_tbl_create_index
-                Table "public.test_tbl_create_index"
- Column |  Type   | Modifiers | Storage | Stats target | Description 
---------+---------+-----------+---------+--------------+-------------
- val    | integer |           | plain   |              | 
- val2   | integer |           | plain   |              | 
+                           Table "public.test_tbl_create_index"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ val    | integer |           |          |         | plain   |              | 
+ val2   | integer |           |          |         | plain   |              | 
+Indexes:
+    "test2_idx" gist (val, upper(val2::text))
 
+-- Should both fail because BDR2 does not support concurrent index operations
 CREATE INDEX CONCURRENTLY test1_idx ON test_tbl_create_index(val, val2);
+ERROR:  CREATE INDEX CONCURRENTLY without bdr.skip_ddl_replication set may only affect UNLOGGED or TEMPORARY tables when BDR is active; test_tbl_create_index is a regular table
 CREATE UNIQUE INDEX CONCURRENTLY test2_idx ON test_tbl_create_index (lower(val2::text));
+ERROR:  CREATE INDEX CONCURRENTLY without bdr.skip_ddl_replication set may only affect UNLOGGED or TEMPORARY tables when BDR is active; test_tbl_create_index is a regular table
 SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
  wait_slot_confirm_lsn 
 -----------------------
@@ -352,28 +356,29 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 (1 row)
 
 \d+ test_tbl_create_index
-                Table "public.test_tbl_create_index"
- Column |  Type   | Modifiers | Storage | Stats target | Description 
---------+---------+-----------+---------+--------------+-------------
- val    | integer |           | plain   |              | 
- val2   | integer |           | plain   |              | 
+                           Table "public.test_tbl_create_index"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ val    | integer |           |          |         | plain   |              | 
+ val2   | integer |           |          |         | plain   |              | 
 Indexes:
-    "test2_idx" UNIQUE, btree (lower(val2::text))
-    "test1_idx" btree (val, val2)
+    "test2_idx" gist (val, upper(val2::text))
 
 \c regression
 \d+ test_tbl_create_index
-                Table "public.test_tbl_create_index"
- Column |  Type   | Modifiers | Storage | Stats target | Description 
---------+---------+-----------+---------+--------------+-------------
- val    | integer |           | plain   |              | 
- val2   | integer |           | plain   |              | 
+                           Table "public.test_tbl_create_index"
+ Column |  Type   | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+---------+-----------+----------+---------+---------+--------------+-------------
+ val    | integer |           |          |         | plain   |              | 
+ val2   | integer |           |          |         | plain   |              | 
 Indexes:
-    "test2_idx" UNIQUE, btree (lower(val2::text))
-    "test1_idx" btree (val, val2)
+    "test2_idx" gist (val, upper(val2::text))
 
+-- Should both fail because BDR2 does not support concurrent index operations
 DROP INDEX CONCURRENTLY test1_idx;
+ERROR:  DROP INDEX CONCURRENTLY is not supported without bdr.skip_ddl_replication set
 DROP INDEX CONCURRENTLY test2_idx;
+ERROR:  DROP INDEX CONCURRENTLY is not supported without bdr.skip_ddl_replication set
 DROP TABLE test_tbl_create_index;
 CREATE TABLE test_simple_create_with_arrays_tbl(val int[], val1 text[]);
 SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
@@ -383,19 +388,19 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 (1 row)
 
 \d+ test_simple_create_with_arrays_tbl
-           Table "public.test_simple_create_with_arrays_tbl"
- Column |   Type    | Modifiers | Storage  | Stats target | Description 
---------+-----------+-----------+----------+--------------+-------------
- val    | integer[] |           | extended |              | 
- val1   | text[]    |           | extended |              | 
+                      Table "public.test_simple_create_with_arrays_tbl"
+ Column |   Type    | Collation | Nullable | Default | Storage  | Stats target | Description 
+--------+-----------+-----------+----------+---------+----------+--------------+-------------
+ val    | integer[] |           |          |         | extended |              | 
+ val1   | text[]    |           |          |         | extended |              | 
 
 \c postgres
 \d+ test_simple_create_with_arrays_tbl
-           Table "public.test_simple_create_with_arrays_tbl"
- Column |   Type    | Modifiers | Storage  | Stats target | Description 
---------+-----------+-----------+----------+--------------+-------------
- val    | integer[] |           | extended |              | 
- val1   | text[]    |           | extended |              | 
+                      Table "public.test_simple_create_with_arrays_tbl"
+ Column |   Type    | Collation | Nullable | Default | Storage  | Stats target | Description 
+--------+-----------+-----------+----------+---------+----------+--------------+-------------
+ val    | integer[] |           |          |         | extended |              | 
+ val1   | text[]    |           |          |         | extended |              | 
 
 DROP TABLE test_simple_create_with_arrays_tbl;
 CREATE TYPE test_t AS ENUM('a','b','c');
@@ -407,19 +412,19 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 (1 row)
 
 \d+ test_simple_create_with_enums_tbl
-          Table "public.test_simple_create_with_enums_tbl"
- Column |  Type  | Modifiers | Storage | Stats target | Description 
---------+--------+-----------+---------+--------------+-------------
- val    | test_t |           | plain   |              | 
- val1   | test_t |           | plain   |              | 
+                    Table "public.test_simple_create_with_enums_tbl"
+ Column |  Type  | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+--------+-----------+----------+---------+---------+--------------+-------------
+ val    | test_t |           |          |         | plain   |              | 
+ val1   | test_t |           |          |         | plain   |              | 
 
 \c regression
 \d+ test_simple_create_with_enums_tbl
-          Table "public.test_simple_create_with_enums_tbl"
- Column |  Type  | Modifiers | Storage | Stats target | Description 
---------+--------+-----------+---------+--------------+-------------
- val    | test_t |           | plain   |              | 
- val1   | test_t |           | plain   |              | 
+                    Table "public.test_simple_create_with_enums_tbl"
+ Column |  Type  | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+--------+-----------+----------+---------+---------+--------------+-------------
+ val    | test_t |           |          |         | plain   |              | 
+ val1   | test_t |           |          |         | plain   |              | 
 
 DROP TABLE test_simple_create_with_enums_tbl;
 DROP TYPE test_t;
@@ -431,17 +436,17 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 
 \d+ test_simple_create_with_enums_tbl
 \dT+ test_t
-                                List of data types
- Schema | Name | Internal name | Size | Elements | Access privileges | Description 
---------+------+---------------+------+----------+-------------------+-------------
+                                    List of data types
+ Schema | Name | Internal name | Size | Elements | Owner | Access privileges | Description 
+--------+------+---------------+------+----------+-------+-------------------+-------------
 (0 rows)
 
 \c postgres
 \d+ test_simple_create_with_enums_tbl
 \dT+ test_t
-                                List of data types
- Schema | Name | Internal name | Size | Elements | Access privileges | Description 
---------+------+---------------+------+----------+-------------------+-------------
+                                    List of data types
+ Schema | Name | Internal name | Size | Elements | Owner | Access privileges | Description 
+--------+------+---------------+------+----------+-------+-------------------+-------------
 (0 rows)
 
 CREATE TYPE test_t AS (f1 text, f2 float, f3 integer);
@@ -453,19 +458,19 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 (1 row)
 
 \d+ test_simple_create_with_composites_tbl
-        Table "public.test_simple_create_with_composites_tbl"
- Column |  Type  | Modifiers | Storage  | Stats target | Description 
---------+--------+-----------+----------+--------------+-------------
- val    | test_t |           | extended |              | 
- val1   | test_t |           | extended |              | 
+                  Table "public.test_simple_create_with_composites_tbl"
+ Column |  Type  | Collation | Nullable | Default | Storage  | Stats target | Description 
+--------+--------+-----------+----------+---------+----------+--------------+-------------
+ val    | test_t |           |          |         | extended |              | 
+ val1   | test_t |           |          |         | extended |              | 
 
 \c regression
 \d+ test_simple_create_with_composites_tbl
-        Table "public.test_simple_create_with_composites_tbl"
- Column |  Type  | Modifiers | Storage  | Stats target | Description 
---------+--------+-----------+----------+--------------+-------------
- val    | test_t |           | extended |              | 
- val1   | test_t |           | extended |              | 
+                  Table "public.test_simple_create_with_composites_tbl"
+ Column |  Type  | Collation | Nullable | Default | Storage  | Stats target | Description 
+--------+--------+-----------+----------+---------+----------+--------------+-------------
+ val    | test_t |           |          |         | extended |              | 
+ val1   | test_t |           |          |         | extended |              | 
 
 DROP TABLE test_simple_create_with_composites_tbl;
 DROP TYPE test_t;
@@ -477,17 +482,17 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 
 \d+ test_simple_create_with_composites_tbl
 \dT+ test_t
-                                List of data types
- Schema | Name | Internal name | Size | Elements | Access privileges | Description 
---------+------+---------------+------+----------+-------------------+-------------
+                                    List of data types
+ Schema | Name | Internal name | Size | Elements | Owner | Access privileges | Description 
+--------+------+---------------+------+----------+-------+-------------------+-------------
 (0 rows)
 
 \c postgres
 \d+ test_simple_create_with_composites_tbl
 \dT+ test_t
-                                List of data types
- Schema | Name | Internal name | Size | Elements | Access privileges | Description 
---------+------+---------------+------+----------+-------------------+-------------
+                                    List of data types
+ Schema | Name | Internal name | Size | Elements | Owner | Access privileges | Description 
+--------+------+---------------+------+----------+-------+-------------------+-------------
 (0 rows)
 
 DROP TABLE test_tbl_serial;
@@ -510,68 +515,68 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 (1 row)
 
 \d+ test_tbl_inh_*
-                         Table "public.test_tbl_inh_chld1"
- Column | Type |         Modifiers          | Storage  | Stats target | Description 
---------+------+----------------------------+----------+--------------+-------------
- f1     | text |                            | extended |              | 
- f2     | date | default '01-02-2014'::date | plain    |              | 
+                                 Table "public.test_tbl_inh_chld1"
+ Column | Type | Collation | Nullable |      Default       | Storage  | Stats target | Description 
+--------+------+-----------+----------+--------------------+----------+--------------+-------------
+ f1     | text |           |          |                    | extended |              | 
+ f2     | date |           |          | '01-02-2014'::date | plain    |              | 
 Inherits: test_tbl_inh_parent
 Child tables: test_tbl_inh_chld3
 
-                         Table "public.test_tbl_inh_chld2"
- Column | Type |         Modifiers          | Storage  | Stats target | Description 
---------+------+----------------------------+----------+--------------+-------------
- f1     | text |                            | extended |              | 
- f2     | date | default '01-02-2014'::date | plain    |              | 
+                                 Table "public.test_tbl_inh_chld2"
+ Column | Type | Collation | Nullable |      Default       | Storage  | Stats target | Description 
+--------+------+-----------+----------+--------------------+----------+--------------+-------------
+ f1     | text |           |          |                    | extended |              | 
+ f2     | date |           |          | '01-02-2014'::date | plain    |              | 
 Inherits: test_tbl_inh_parent
 
-                         Table "public.test_tbl_inh_chld3"
- Column | Type |         Modifiers          | Storage  | Stats target | Description 
---------+------+----------------------------+----------+--------------+-------------
- f1     | text |                            | extended |              | 
- f2     | date | default '01-02-2014'::date | plain    |              | 
+                                 Table "public.test_tbl_inh_chld3"
+ Column | Type | Collation | Nullable |      Default       | Storage  | Stats target | Description 
+--------+------+-----------+----------+--------------------+----------+--------------+-------------
+ f1     | text |           |          |                    | extended |              | 
+ f2     | date |           |          | '01-02-2014'::date | plain    |              | 
 Inherits: test_tbl_inh_parent,
           test_tbl_inh_chld1
 
-                         Table "public.test_tbl_inh_parent"
- Column | Type |         Modifiers          | Storage  | Stats target | Description 
---------+------+----------------------------+----------+--------------+-------------
- f1     | text |                            | extended |              | 
- f2     | date | default '01-02-2014'::date | plain    |              | 
+                                Table "public.test_tbl_inh_parent"
+ Column | Type | Collation | Nullable |      Default       | Storage  | Stats target | Description 
+--------+------+-----------+----------+--------------------+----------+--------------+-------------
+ f1     | text |           |          |                    | extended |              | 
+ f2     | date |           |          | '01-02-2014'::date | plain    |              | 
 Child tables: test_tbl_inh_chld1,
               test_tbl_inh_chld2,
               test_tbl_inh_chld3
 
 \c regression
 \d+ test_tbl_inh_*
-                         Table "public.test_tbl_inh_chld1"
- Column | Type |         Modifiers          | Storage  | Stats target | Description 
---------+------+----------------------------+----------+--------------+-------------
- f1     | text |                            | extended |              | 
- f2     | date | default '02-01-2014'::date | plain    |              | 
+                                 Table "public.test_tbl_inh_chld1"
+ Column | Type | Collation | Nullable |      Default       | Storage  | Stats target | Description 
+--------+------+-----------+----------+--------------------+----------+--------------+-------------
+ f1     | text |           |          |                    | extended |              | 
+ f2     | date |           |          | '01-02-2014'::date | plain    |              | 
 Inherits: test_tbl_inh_parent
 Child tables: test_tbl_inh_chld3
 
-                         Table "public.test_tbl_inh_chld2"
- Column | Type |         Modifiers          | Storage  | Stats target | Description 
---------+------+----------------------------+----------+--------------+-------------
- f1     | text |                            | extended |              | 
- f2     | date | default '02-01-2014'::date | plain    |              | 
+                                 Table "public.test_tbl_inh_chld2"
+ Column | Type | Collation | Nullable |      Default       | Storage  | Stats target | Description 
+--------+------+-----------+----------+--------------------+----------+--------------+-------------
+ f1     | text |           |          |                    | extended |              | 
+ f2     | date |           |          | '01-02-2014'::date | plain    |              | 
 Inherits: test_tbl_inh_parent
 
-                         Table "public.test_tbl_inh_chld3"
- Column | Type |         Modifiers          | Storage  | Stats target | Description 
---------+------+----------------------------+----------+--------------+-------------
- f1     | text |                            | extended |              | 
- f2     | date | default '02-01-2014'::date | plain    |              | 
+                                 Table "public.test_tbl_inh_chld3"
+ Column | Type | Collation | Nullable |      Default       | Storage  | Stats target | Description 
+--------+------+-----------+----------+--------------------+----------+--------------+-------------
+ f1     | text |           |          |                    | extended |              | 
+ f2     | date |           |          | '01-02-2014'::date | plain    |              | 
 Inherits: test_tbl_inh_parent,
           test_tbl_inh_chld1
 
-                         Table "public.test_tbl_inh_parent"
- Column | Type |         Modifiers          | Storage  | Stats target | Description 
---------+------+----------------------------+----------+--------------+-------------
- f1     | text |                            | extended |              | 
- f2     | date | default '02-01-2014'::date | plain    |              | 
+                                Table "public.test_tbl_inh_parent"
+ Column | Type | Collation | Nullable |      Default       | Storage  | Stats target | Description 
+--------+------+-----------+----------+--------------------+----------+--------------+-------------
+ f1     | text |           |          |                    | extended |              | 
+ f2     | date |           |          | '01-02-2014'::date | plain    |              | 
 Child tables: test_tbl_inh_chld1,
               test_tbl_inh_chld2,
               test_tbl_inh_chld3
@@ -589,11 +594,11 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 (1 row)
 
 \d+ test_tbl_inh_parent
-                         Table "public.test_tbl_inh_parent"
- Column | Type |         Modifiers          | Storage  | Stats target | Description 
---------+------+----------------------------+----------+--------------+-------------
- f1     | text |                            | extended |              | 
- f2     | date | default '02-01-2014'::date | plain    |              | 
+                                Table "public.test_tbl_inh_parent"
+ Column | Type | Collation | Nullable |      Default       | Storage  | Stats target | Description 
+--------+------+-----------+----------+--------------------+----------+--------------+-------------
+ f1     | text |           |          |                    | extended |              | 
+ f2     | date |           |          | '01-02-2014'::date | plain    |              | 
 Rules:
     test_tbl_inh_parent_rule_ins_1 AS
     ON INSERT TO test_tbl_inh_parent
@@ -609,11 +614,11 @@ Child tables: test_tbl_inh_chld1,
 
 \c postgres
 \d+ test_tbl_inh_parent
-                         Table "public.test_tbl_inh_parent"
- Column | Type |         Modifiers          | Storage  | Stats target | Description 
---------+------+----------------------------+----------+--------------+-------------
- f1     | text |                            | extended |              | 
- f2     | date | default '01-02-2014'::date | plain    |              | 
+                                Table "public.test_tbl_inh_parent"
+ Column | Type | Collation | Nullable |      Default       | Storage  | Stats target | Description 
+--------+------+-----------+----------+--------------------+----------+--------------+-------------
+ f1     | text |           |          |                    | extended |              | 
+ f2     | date |           |          | '01-02-2014'::date | plain    |              | 
 Rules:
     test_tbl_inh_parent_rule_ins_1 AS
     ON INSERT TO test_tbl_inh_parent
@@ -629,8 +634,8 @@ Child tables: test_tbl_inh_chld1,
 
 DROP TABLE test_tbl_inh_chld1;
 ERROR:  cannot drop table test_tbl_inh_chld1 because other objects depend on it
-DETAIL:  rule test_tbl_inh_parent_rule_ins_1 on table test_tbl_inh_parent depends on table test_tbl_inh_chld1
-table test_tbl_inh_chld3 depends on table test_tbl_inh_chld1
+DETAIL:  table test_tbl_inh_chld3 depends on table test_tbl_inh_chld1
+rule test_tbl_inh_parent_rule_ins_1 on table test_tbl_inh_parent depends on table test_tbl_inh_chld1
 HINT:  Use DROP ... CASCADE to drop the dependent objects too.
 DROP TABLE test_tbl_inh_parent CASCADE;
 NOTICE:  drop cascades to 3 other objects
@@ -650,10 +655,10 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 \c postgres
 CREATE TABLE tbl_showfillfactor (name char(500), unique (name) with (fillfactor=65)) with (fillfactor=75);
 \d+ tbl_showfillfactor
-                      Table "public.tbl_showfillfactor"
- Column |      Type      | Modifiers | Storage  | Stats target | Description 
---------+----------------+-----------+----------+--------------+-------------
- name   | character(500) |           | extended |              | 
+                                Table "public.tbl_showfillfactor"
+ Column |      Type      | Collation | Nullable | Default | Storage  | Stats target | Description 
+--------+----------------+-----------+----------+---------+----------+--------------+-------------
+ name   | character(500) |           |          |         | extended |              | 
 Indexes:
     "tbl_showfillfactor_name_key" UNIQUE CONSTRAINT, btree (name) WITH (fillfactor='65')
 Options: fillfactor=75
@@ -666,10 +671,10 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 
 \c regression
 \d+ tbl_showfillfactor
-                      Table "public.tbl_showfillfactor"
- Column |      Type      | Modifiers | Storage  | Stats target | Description 
---------+----------------+-----------+----------+--------------+-------------
- name   | character(500) |           | extended |              | 
+                                Table "public.tbl_showfillfactor"
+ Column |      Type      | Collation | Nullable | Default | Storage  | Stats target | Description 
+--------+----------------+-----------+----------+---------+----------+--------------+-------------
+ name   | character(500) |           |          |         | extended |              | 
 Indexes:
     "tbl_showfillfactor_name_key" UNIQUE CONSTRAINT, btree (name) WITH (fillfactor='65')
 Options: fillfactor=75
@@ -805,11 +810,7 @@ CREATE OPERATOR ## (
 );
 CREATE OPERATOR @#@ (
    rightarg = int8,		-- left unary
-   procedure = numeric_fac
-);
-CREATE OPERATOR #@# (
-   leftarg = int8,		-- right unary
-   procedure = numeric_fac
+   procedure = factorial
 );
 SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
  wait_slot_confirm_lsn 
@@ -825,17 +826,10 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 (1 row)
 
 \do public.@#@
-                                      List of operators
- Schema | Name | Left arg type | Right arg type | Result type |         Description          
---------+------+---------------+----------------+-------------+------------------------------
- public | @#@  |               | bigint         | numeric     | implementation of ! operator
-(1 row)
-
-\do public.#@#
-                                      List of operators
- Schema | Name | Left arg type | Right arg type | Result type |         Description          
---------+------+---------------+----------------+-------------+------------------------------
- public | #@#  | bigint        |                | numeric     | implementation of ! operator
+                             List of operators
+ Schema | Name | Left arg type | Right arg type | Result type | Description 
+--------+------+---------------+----------------+-------------+-------------
+ public | @#@  |               | bigint         | numeric     | factorial
 (1 row)
 
 \c regression
@@ -847,22 +841,14 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 (1 row)
 
 \do public.@#@
-                                      List of operators
- Schema | Name | Left arg type | Right arg type | Result type |         Description          
---------+------+---------------+----------------+-------------+------------------------------
- public | @#@  |               | bigint         | numeric     | implementation of ! operator
-(1 row)
-
-\do public.#@#
-                                      List of operators
- Schema | Name | Left arg type | Right arg type | Result type |         Description          
---------+------+---------------+----------------+-------------+------------------------------
- public | #@#  | bigint        |                | numeric     | implementation of ! operator
+                             List of operators
+ Schema | Name | Left arg type | Right arg type | Result type | Description 
+--------+------+---------------+----------------+-------------+-------------
+ public | @#@  |               | bigint         | numeric     | factorial
 (1 row)
 
 DROP OPERATOR ##(path, path);
 DROP OPERATOR @#@(none,int8);
-DROP OPERATOR #@#(int8,none);
 \do public.##
                              List of operators
  Schema | Name | Left arg type | Right arg type | Result type | Description 
@@ -870,12 +856,6 @@ DROP OPERATOR #@#(int8,none);
 (0 rows)
 
 \do public.@#@
-                             List of operators
- Schema | Name | Left arg type | Right arg type | Result type | Description 
---------+------+---------------+----------------+-------------+-------------
-(0 rows)
-
-\do public.#@#
                              List of operators
  Schema | Name | Left arg type | Right arg type | Result type | Description 
 --------+------+---------------+----------------+-------------+-------------
@@ -895,12 +875,6 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 (0 rows)
 
 \do public.@#@
-                             List of operators
- Schema | Name | Left arg type | Right arg type | Result type | Description 
---------+------+---------------+----------------+-------------+-------------
-(0 rows)
-
-\do public.#@#
                              List of operators
  Schema | Name | Left arg type | Right arg type | Result type | Description 
 --------+------+---------------+----------------+-------------+-------------

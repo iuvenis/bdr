@@ -12,7 +12,7 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
                                   List of installed extensions
   Name   | Version | Schema |                            Description                            
 ---------+---------+--------+-------------------------------------------------------------------
- pg_trgm | 1.1     | public | text similarity measurement and index searching based on trigrams
+ pg_trgm | 1.6     | public | text similarity measurement and index searching based on trigrams
 (1 row)
 
 -- drop and recreate using CINE
@@ -42,7 +42,7 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
                                   List of installed extensions
   Name   | Version | Schema |                            Description                            
 ---------+---------+--------+-------------------------------------------------------------------
- pg_trgm | 1.1     | public | text similarity measurement and index searching based on trigrams
+ pg_trgm | 1.6     | public | text similarity measurement and index searching based on trigrams
 (1 row)
 
 -- CINE existing extension
@@ -59,7 +59,7 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
                                   List of installed extensions
   Name   | Version | Schema |                            Description                            
 ---------+---------+--------+-------------------------------------------------------------------
- pg_trgm | 1.1     | public | text similarity measurement and index searching based on trigrams
+ pg_trgm | 1.6     | public | text similarity measurement and index searching based on trigrams
 (1 row)
 
 DROP EXTENSION pg_trgm;

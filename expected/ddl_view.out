@@ -8,33 +8,33 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 (1 row)
 
 \d+ test_view
-                       View "public.test_view"
- Column |          Type          | Modifiers | Storage  | Description 
---------+------------------------+-----------+----------+-------------
- a      | integer                |           | plain    | 
- b      | character varying(100) |           | extended | 
- c      | date                   |           | plain    | 
+                                  View "public.test_view"
+ Column |          Type          | Collation | Nullable | Default | Storage  | Description 
+--------+------------------------+-----------+----------+---------+----------+-------------
+ a      | integer                |           |          |         | plain    | 
+ b      | character varying(100) |           |          |         | extended | 
+ c      | date                   |           |          |         | plain    | 
 View definition:
- SELECT test_src_tbl.a,
-    test_src_tbl.b,
-    test_src_tbl.c
+ SELECT a,
+    b,
+    c
    FROM test_src_tbl
-  WHERE test_src_tbl.a > 1;
+  WHERE a > 1;
 
 \c regression
 \d+ test_view
-                       View "public.test_view"
- Column |          Type          | Modifiers | Storage  | Description 
---------+------------------------+-----------+----------+-------------
- a      | integer                |           | plain    | 
- b      | character varying(100) |           | extended | 
- c      | date                   |           | plain    | 
+                                  View "public.test_view"
+ Column |          Type          | Collation | Nullable | Default | Storage  | Description 
+--------+------------------------+-----------+----------+---------+----------+-------------
+ a      | integer                |           |          |         | plain    | 
+ b      | character varying(100) |           |          |         | extended | 
+ c      | date                   |           |          |         | plain    | 
 View definition:
- SELECT test_src_tbl.a,
-    test_src_tbl.b,
-    test_src_tbl.c
+ SELECT a,
+    b,
+    c
    FROM test_src_tbl
-  WHERE test_src_tbl.a > 1;
+  WHERE a > 1;
 
 SELECT * FROM test_view;
  a | b | c 
