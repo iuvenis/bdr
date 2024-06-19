@@ -580,6 +580,22 @@ is_temp_or_unlogged(RangeVar *rangeVar)
 	return foundTempRelInPath;
 }
 
+typedef enum
+{
+    UNKNOWN,
+    PERMANENT,
+    NONPERMANENT
+} PersistenceType;
+
+static void
+checked_remember_persistence(PersistenceType *prevpersistence, const PersistenceType currpersistence)
+{
+	if (*prevpersistence != currpersistence && *prevpersistence != UNKNOWN)
+		ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+		    errmsg("DROP statements may not affect both logged and unlogged objects.")));
+	*prevpersistence = currpersistence;
+}
+
 static bool
 statement_affects_only_nonpermanent(Node *parsetree)
 {
@@ -597,6 +613,8 @@ statement_affects_only_nonpermanent(Node *parsetree)
 			}
 		case T_DropStmt:
 			{
+				bool alltemp = true;
+				PersistenceType prevpersistence = UNKNOWN;
 				DropStmt *stmt = (DropStmt *) parsetree;
 				ListCell   *cell;
 
@@ -643,12 +661,16 @@ statement_affects_only_nonpermanent(Node *parsetree)
 
 					/*
 					 * The relpersistence field of our self-constructed RangeVar always indicates
-					 * a permanent relation, but we can still identify the relation as temporary
+					 * a permanent relation. We can still identify the relation as temporary
 					 * if the schema is specified as pg_temp, or the first namespace in the
-					 * search_path containing this relation is pg_temp
+					 * search_path containing this relation is pg_temp. Otherwise we open the
+					 * the relation/index for a final check
 					 */
 					if (is_temp_or_unlogged(rv))
-						return true;
+					{
+					    checked_remember_persistence(&prevpersistence, NONPERMANENT);
+					    continue;
+					}
 
 					/*
 					 * Open the underlying relation to check if its relpersistence field was set
@@ -667,10 +689,17 @@ statement_affects_only_nonpermanent(Node *parsetree)
 						index_close(rel, NoLock);
 					}
 
-					if (!istemp)
-						return false;
+					if (istemp)
+					{
+					    checked_remember_persistence(&prevpersistence, NONPERMANENT);
+					}
+					else
+					{
+					    checked_remember_persistence(&prevpersistence, PERMANENT);
+					    alltemp = false;
+					}
 				}
-				return true;
+				return alltemp;
 				break;
 			}
 		case T_IndexStmt:
