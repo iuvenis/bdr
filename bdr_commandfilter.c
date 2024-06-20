@@ -34,6 +34,7 @@
 #include "libpq/auth.h"
 
 #include "parser/parse_utilcmd.h"
+#include "parser/scansup.h"
 
 #include "replication/origin.h"
 
@@ -876,6 +877,53 @@ prevent_drop_extension_bdr(DropStmt *stmt)
 	}
 }
 
+static int
+count_trailing_spaces_or_semicolons(const char *s, size_t len)
+{
+	int result = 0;
+	while (len > 0 && (s[len - 1] == ';' || scanner_isspace(s[len - 1])))
+	    --len, ++result;
+	return result;
+}
+
+static bool
+is_last_statement_in_query(PlannedStmt *pstmt, const char *queryString, size_t query_len)
+{
+	/* stmt_len 0 or -1 means "rest of string" */
+	if (pstmt->stmt_len <= 0)
+		return true;
+
+	/*
+	 * When calculating stmt_len terminating semicolons and everything thereafter is disregarded.
+	 * If the excess remaining length of queryString compared to stmt_len is explainable by trailing garbage
+	 * we can assume that we are looking at the last statement in the query. We assume stmt_location >= 0 here!
+	 */
+	return (query_len - pstmt->stmt_location) - pstmt->stmt_len <= count_trailing_spaces_or_semicolons(queryString, query_len);
+}
+
+static const char*
+get_subquery(PlannedStmt *pstmt, const char *queryString)
+{
+	if (pstmt->stmt_location >= 0)
+	{
+		char *subQueryString;
+		size_t query_len = strlen(queryString);
+
+		if (pstmt->stmt_location > query_len - 1 || pstmt->stmt_len > query_len - pstmt->stmt_location)
+			elog(ERROR, "Implausible statement length %d for query %s", pstmt->stmt_len, queryString);
+
+		if (is_last_statement_in_query(pstmt, queryString, query_len))
+			return queryString + pstmt->stmt_location;
+
+		/* If the sub-query ends in the middle of queryString we need a properly terminated copy */
+		subQueryString = palloc0(pstmt->stmt_len + 1);
+		strncpy(subQueryString, queryString + pstmt->stmt_location, pstmt->stmt_len);
+		return subQueryString;
+	}
+	else
+		return queryString;
+}
+
 /*
  * Make sure we don't execute SQL commands incompatible with BDR.
  * Note: Don't modify pstmt!
@@ -893,15 +941,20 @@ bdr_commandfilter(PlannedStmt *pstmt,
 #endif
 				  QueryCompletion *qc)
 {
-        Node       *parsetree = pstmt->utilityStmt;
+	Node       *parsetree = pstmt->utilityStmt;
 	bool incremented_nestlevel = false;
 	bool affects_only_nonpermanent;
 	bool entered_extension = false;
+	const char *subQueryString = get_subquery(pstmt, queryString);
 
 	/* take strongest lock by default. */
 	BDRLockType	lock_type = BDR_LOCK_WRITE;
 
-        elog(DEBUG2, "processing %s: %s in statement %s", context == PROCESS_UTILITY_TOPLEVEL ? "toplevel" : "query", CreateCommandName(parsetree), queryString);
+	if (subQueryString != queryString)
+	    elog(DEBUG5, "Parsed statement %s from query %s", subQueryString, queryString);
+
+	elog(DEBUG2, "processing %s: %s in statement %s", context == PROCESS_UTILITY_TOPLEVEL ? "toplevel" : "query",
+		CreateCommandName(parsetree), subQueryString);
 
 	/* don't filter in single user mode */
 	if (!IsUnderPostmaster)
@@ -910,7 +963,7 @@ bdr_commandfilter(PlannedStmt *pstmt,
 	/* Permit only VACUUM on the supervisordb, if it exists */
 	if (BdrSupervisorDbOid == InvalidOid)
 		BdrSupervisorDbOid = bdr_get_supervisordb_oid(true);
-		
+
 	if (BdrSupervisorDbOid != InvalidOid
 		&& MyDatabaseId == BdrSupervisorDbOid
 		&& nodeTag(parsetree) != T_VacuumStmt)
@@ -1131,7 +1184,7 @@ bdr_commandfilter(PlannedStmt *pstmt,
 			break;
 
 		case T_AlterTableStmt:
-			filter_AlterTableStmt(parsetree, queryString, &lock_type);
+			filter_AlterTableStmt(parsetree, subQueryString, &lock_type);
 			break;
 
 		case T_AlterDomainStmt:
@@ -1429,15 +1482,16 @@ bdr_commandfilter(PlannedStmt *pstmt,
 		//			 errmsg("Direct DDL commands are not supported while BDR is active"),
 		//			 errhint("Use bdr.bdr_replicate_ddl_command(...)")));
 
-                bdr_capture_ddl(parsetree, queryString, context, params, dest, CreateCommandName(parsetree));
+                bdr_capture_ddl(parsetree, subQueryString, context,
+			params, dest, CreateCommandName(parsetree));
 
-		elog(DEBUG3, "DDLREP: Entering level %d DDL block. Toplevel command is %s", bdr_ddl_nestlevel, queryString);
+		elog(DEBUG3, "DDLREP: Entering DDL block. Toplevel command is %s", subQueryString);
 		incremented_nestlevel = true;
 		bdr_ddl_nestlevel ++;
 	}
 	else
 	{
-		elog(DEBUG3, "DDLREP: At ddl level %d ignoring non-persistent cmd %s", bdr_ddl_nestlevel, queryString);
+		elog(DEBUG3, "DDLREP: At ddl level %d skipping replication of cmd %s", bdr_ddl_nestlevel, subQueryString);
 	}
 	
 
