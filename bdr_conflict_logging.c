@@ -634,7 +634,7 @@ bdr_conflict_log_serverlog(BdrApplyConflict *conflict)
 BdrApplyConflict *
 bdr_make_apply_conflict(BdrConflictType conflict_type,
 						BdrConflictResolution resolution,
-						TransactionId remote_txid,
+						BdrOriginXact *origin_xact,
 						BDRRelation *conflict_relation,
 						TupleTableSlot *local_tuple,
 						RepOriginId local_tuple_origin_id,
@@ -656,7 +656,6 @@ bdr_make_apply_conflict(BdrConflictType conflict_type,
 	conflict->local_conflict_txid = GetTopTransactionIdIfAny();
 	conflict->local_conflict_lsn = GetXLogInsertRecPtr();
 	conflict->local_conflict_time = GetCurrentTimestamp();
-	conflict->remote_txid = remote_txid;
 
 	/* set using bdr_conflict_setrel */
 	if (conflict_relation == NULL)
@@ -673,9 +672,9 @@ bdr_make_apply_conflict(BdrConflictType conflict_type,
 
 	bdr_fetch_sysid_via_node_id(replorigin_session_origin,
 								&conflict->remote_node);
-	conflict->remote_commit_time = replorigin_session_origin_timestamp;
-	conflict->remote_txid = remote_txid;
-	conflict->remote_commit_lsn = replorigin_session_origin_lsn;
+	conflict->remote_txid = origin_xact->xid;
+	conflict->remote_commit_time = origin_xact->timestamp;
+	conflict->remote_commit_lsn = origin_xact->lsn;
 
 	if (local_tuple != NULL)
 	{

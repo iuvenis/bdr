@@ -87,8 +87,9 @@ Oid			QueuedDropsRelid = InvalidOid;
 /* Global apply worker state */
 BDRNodeId	origin;
 bool		started_transaction = false;
-/* During apply, holds xid of remote transaction */
-TransactionId replication_origin_xid = InvalidTransactionId;
+
+/* During apply, holds xid, remote_lsn, and commit timestamp of remote transaction */
+BdrOriginXact origin_xact = {InvalidTransactionId, InvalidXLogRecPtr, 0};
 
 /*
  * For tracking of the remote origin's information when in catchup mode
@@ -178,10 +179,10 @@ format_action_description(
 
 	appendStringInfo(si,
 			" in commit before %X/%X, xid %u commited at %s (action #%u)",
-			(uint32)(replorigin_session_origin_lsn>>32),
-			(uint32)replorigin_session_origin_lsn,
-			replication_origin_xid,
-			timestamptz_to_str(replorigin_session_origin_timestamp),
+			(uint32)(origin_xact.lsn>>32),
+			(uint32)origin_xact.lsn,
+			origin_xact.xid,
+			timestamptz_to_str(origin_xact.timestamp),
 			xact_action_counter);
 
 	if (replorigin_session_origin != InvalidRepOriginId)
@@ -282,17 +283,17 @@ process_remote_begin(StringInfo s)
 	 * origin doesn't actually point to the last-processed commit record,
 	 * but just after it.
 	 */
-	replorigin_session_origin_lsn = commit_afterend_lsn;
-	replorigin_session_origin_timestamp = committime;
+	origin_xact.lsn = commit_afterend_lsn;
+	origin_xact.timestamp = committime;
 
 	/* store remote xid for logging and debugging */
-	replication_origin_xid = remote_xid;
+	origin_xact.xid = remote_xid;
 
 	snprintf(statbuf, sizeof(statbuf),
 			"bdr_apply: BEGIN origin(orig_lsn, timestamp): %X/%X, %s",
-			(uint32) (replorigin_session_origin_lsn >> 32),
-			(uint32) replorigin_session_origin_lsn,
-			timestamptz_to_str(committime));
+			(uint32) (origin_xact.lsn >> 32),
+			(uint32) origin_xact.lsn,
+			timestamptz_to_str(origin_xact.timestamp));
 
 	pgstat_report_activity(STATE_RUNNING, statbuf);
 
@@ -373,9 +374,9 @@ process_remote_begin(StringInfo s)
 			 * we must handle remote commits that are in the future
 			 * according to our local clock.
 			 */
-			if (current < replorigin_session_origin_timestamp)
+			if (current < origin_xact.timestamp)
 			{
-				TimestampDifference(replorigin_session_origin_timestamp, current,
+				TimestampDifference(origin_xact.timestamp, current,
 									&sec, &usec);
 				
 				/* ignore small skews */
@@ -398,7 +399,7 @@ process_remote_begin(StringInfo s)
 				current = TimestampTzPlusMilliseconds(current,
 													  -apply_delay);
 
-				TimestampDifference(current, replorigin_session_origin_timestamp,
+				TimestampDifference(current, origin_xact.timestamp,
 									&sec, &usec);
 
 				/*
@@ -481,27 +482,12 @@ process_remote_commit(StringInfo s)
 		pfree(si.data);
 	}
 
-	Assert(committime == replorigin_session_origin_timestamp);
-
-	Assert(replorigin_session_origin_lsn == commit_afterend_lsn /* bdr 2.0 msg */
-		|| replorigin_session_origin_lsn == commit_lsn); /* bdr 1.0 msg */
-
-	/*
-	 * BDR 1.0 used to send the start-of-commit lsn (commit_lsn) in BEGIN,
-	 * not the position of the end of the commit record, and we might have
-	 * used that in the replorigin settings if that's all we had.
-	 *
-	 * That's wrong; we're supposed to use end-of-commit + 1. But with BDR
-	 * 1.0 we don't have that information. To protect against replaying
-	 * the same commit again, report that we've flushed at least 1 byte
-	 * past start-of-commit.
-	 */
-	if (replorigin_session_origin_lsn == commit_lsn)
-		replorigin_session_origin_lsn += 1;
-
 	if (started_transaction)
 	{
 		BdrFlushPosition *flushpos;
+
+		replorigin_session_origin_lsn = commit_afterend_lsn;
+		replorigin_session_origin_timestamp = committime;
 
 		CommitTransactionCommand();
 		(void) MemoryContextSwitchTo(MessageContext);
@@ -552,7 +538,9 @@ process_remote_commit(StringInfo s)
 
 	bdr_count_commit();
 
-	replication_origin_xid = InvalidTransactionId;
+	origin_xact.xid = InvalidTransactionId;
+	origin_xact.lsn = InvalidXLogRecPtr;
+	origin_xact.timestamp = 0;
 	replorigin_session_origin_lsn = InvalidXLogRecPtr;
 	replorigin_session_origin_timestamp = 0;
 
@@ -765,7 +753,7 @@ process_remote_insert(StringInfo s)
 		{
 			apply_conflict = bdr_make_apply_conflict(
 				BdrConflictType_InsertInsert, resolution,
-				replication_origin_xid, rel, oldslot, local_node_id,
+				&origin_xact, rel, oldslot, local_node_id,
 				newslot, local_ts, NULL /*no error*/);
 
 			bdr_conflict_log_serverlog(apply_conflict);
@@ -1039,7 +1027,7 @@ process_remote_update(StringInfo s)
 		{
 			apply_conflict = bdr_make_apply_conflict(
 				BdrConflictType_UpdateUpdate, resolution,
-				replication_origin_xid, rel, oldslot, local_node_id,
+				&origin_xact, rel, oldslot, local_node_id,
 				newslot, local_ts, NULL /*no error*/);
 
 			bdr_conflict_log_serverlog(apply_conflict);
@@ -1109,7 +1097,7 @@ process_remote_update(StringInfo s)
 
 
 		apply_conflict = bdr_make_apply_conflict(
-			BdrConflictType_UpdateDelete, resolution, replication_origin_xid,
+			BdrConflictType_UpdateDelete, resolution, &origin_xact,
 			rel, NULL, InvalidRepOriginId, newslot, 0, NULL /*no error*/);
 
 		bdr_conflict_log_serverlog(apply_conflict);
@@ -1304,7 +1292,7 @@ process_remote_delete(StringInfo s)
 			BdrConflictType_DeleteDelete,
 			skip ? BdrConflictResolution_ConflictTriggerSkipChange :
 				   BdrConflictResolution_DefaultSkipChange,
-			replication_origin_xid,	rel, NULL, InvalidRepOriginId,
+			&origin_xact,	rel, NULL, InvalidRepOriginId,
 			oldslot, 0, NULL /*no error*/);
 
 		bdr_conflict_log_serverlog(apply_conflict);
@@ -1490,7 +1478,7 @@ check_apply_update(BdrConflictType conflict_type,
 		 * --------------
 		 */
 
-		abs_timestamp_difference(replorigin_session_origin_timestamp, local_ts,
+		abs_timestamp_difference(origin_xact.timestamp, local_ts,
 								 &secs, &microsecs);
 
 		*new_tuple = bdr_conflict_handlers_resolve(rel, local_tuple, remote_tuple,
@@ -1526,7 +1514,7 @@ check_apply_update(BdrConflictType conflict_type,
 	bdr_conflict_last_update_wins(local_node_id,
 								  replorigin_session_origin,
 								  local_ts,
-								  replorigin_session_origin_timestamp,
+								  origin_xact.timestamp,
 								  perform_update, log_update,
 								  resolution);
 }

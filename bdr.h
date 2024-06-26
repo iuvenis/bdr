@@ -369,6 +369,13 @@ typedef struct BdrFlushPosition
 	XLogRecPtr remote_end;
 } BdrFlushPosition;
 
+typedef struct BdrOriginXact
+{
+	    TransactionId xid;
+	    XLogRecPtr	  lsn;
+	    TimestampTz   timestamp;
+} BdrOriginXact;
+
 /* GUCs */
 extern int	bdr_default_apply_delay;
 extern int bdr_max_workers;
@@ -525,7 +532,7 @@ extern void bdr_conflict_logging_cleanup(void);
 
 extern BdrApplyConflict * bdr_make_apply_conflict(BdrConflictType conflict_type,
 									BdrConflictResolution resolution,
-									TransactionId remote_txid,
+									BdrOriginXact *origin_xact,
 									BDRRelation *conflict_relation,
 									struct TupleTableSlot *local_tuple,
 									RepOriginId local_tuple_origin_id,
