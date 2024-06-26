@@ -45,11 +45,7 @@
 #include "utils/fmgroids.h"
 #include "utils/guc.h"
 
-#if PG_VERSION_NUM >= 90500
-	#define CONNECTION_LIMIT_STR "connection_limit"
-#else
-	#define CONNECTION_LIMIT_STR "connectionlimit"
-#endif
+#define CONNECTION_LIMIT_STR "connection_limit"
 
 /*
  * Register a new perdb worker for the named database. The worker MUST

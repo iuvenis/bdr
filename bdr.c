@@ -981,11 +981,7 @@ bdr_maintain_schema(bool update_extensions)
 
 	set_config_option("bdr.skip_ddl_replication", "true",
 					  PGC_SUSET, PGC_S_OVERRIDE, GUC_ACTION_LOCAL,
-					  true, 0
-#if PG_VERSION_NUM >= 90500
-							 , false
-#endif
-							);
+					  true, 0, false);
 
 	/* make sure we're operating without other bdr workers interfering */
 	extrel = table_open(ExtensionRelationId, ShareUpdateExclusiveLock);
@@ -1379,13 +1375,11 @@ bdr_skip_changes_upto(PG_FUNCTION_ARGS)
 			ResetLatch(&MyProc->procLatch);
 		}
 
-#if PG_VERSION_NUM >= 90600
 		/*
 		 * We need a RowExclusiveLock on pg_replication_origin per docs for
 		 * replorigin_advance(...).
 		 */
 		LockRelationOid(ReplicationOriginRelationId, RowExclusiveLock);
-#endif
 
 
 		/* 
@@ -1395,9 +1389,7 @@ bdr_skip_changes_upto(PG_FUNCTION_ARGS)
 		 */
 		replorigin_advance(nodeid, upto_lsn + 1, XactLastCommitEnd, false, true);
 
-#if PG_VERSION_NUM >= 90600
 		UnlockRelationOid(ReplicationOriginRelationId, RowExclusiveLock);
-#endif
 	}
 	PG_END_ENSURE_ERROR_CLEANUP(bdr_skip_changes_upto_cleanup, (Datum)0);
 
