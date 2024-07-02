@@ -65,14 +65,10 @@ bdr_process_remote_message(StringInfo s)
 		 BDR_NODEID_FORMAT_WITHNAME_ARGS(origin_node),
 		 (uint32) (lsn >> 32), (uint32) lsn);
 
-	if (bdr_locks_process_message(msg_type, transactional, lsn, &origin_node, &message))
-		goto done;
-	
-	elog(WARNING, "unhandled BDR message of type %s", bdr_message_type_str(msg_type));
+	bdr_locks_process_message(msg_type, transactional, lsn, &origin_node, &message);
 
 	resetStringInfo(&message);
 
-done:
 	if (!transactional)
 		replorigin_session_advance(lsn, InvalidXLogRecPtr);
 
@@ -150,6 +146,7 @@ char* bdr_message_type_str(BdrMessageType message_type)
 			return "BDR_MESSAGE_REQUEST_REPLAY_CONFIRM";
 		case BDR_MESSAGE_REPLAY_CONFIRM:
 			return "BDR_MESSAGE_REPLAY_CONFIRM";
+		default:
+			return "BDR_MESSAGE_UNKNOWN";
 	}
-	elog(ERROR, "unhandled BdrMessageType %d", message_type);
 }

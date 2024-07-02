@@ -697,36 +697,29 @@ bdr_locks_set_nnodes(int nnodes)
 	Assert(nnodes >= 0);
 
 	LWLockAcquire(bdr_locks_ctl->lock, LW_EXCLUSIVE);
-	if (bdr_my_locks_database->nnodes < nnodes && bdr_my_locks_database->nnodes > 0 && !bdr_my_locks_database->lockcount)
-	{
-		/*
-		 * Because we take the ddl lock before setting node_status = r now, and
-		 * we only count ready nodes in the node count, it should only be
-		 * possible for the node count to increase when the DDL lock is held.
-		 *
-		 * If there are older BDR nodes that don't take the DDL lock before
-		 * joining this protection doesn't apply, so we can only warn about it.
-		 * Unless there's a lock acquisition in progress (which we don't
-		 * actually know from here) it's harmless anyway.
-		 *
-		 * A corresponding nodecount decrease without the DDL lock held is
-		 * normal. Node part doesn't take the DDL lock, but it's careful
-		 * to reject any in-progress DDL lock attempt or release any held
-		 * lock.
-		 *
-		 * FIXME: there's a race here where we could release the lock before
-		 * applying the final changes for the node in the perdb worker. We
-		 * should really perform this test and update when we see the new
-		 * bdr.bdr_nodes row arrive instead. See 2ndQuadrant/bdr-private#97.
-		 */
-		ereport(WARNING,
-				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
-				 errmsg("number of nodes increased %d => %d while local DDL lock not held",
-						bdr_my_locks_database->nnodes, nnodes),
-				 errhint("this should only happen during an upgrade from an older BDR version")));
-	}
+	if (bdr_my_locks_database->nnodes != nnodes)
+		elog(INFO, "number of nodes updated %d => %d", bdr_my_locks_database->nnodes, nnodes);
 	bdr_my_locks_database->nnodes = nnodes;
 	LWLockRelease(bdr_locks_ctl->lock);
+}
+
+static bool
+is_ignoring_ddl()
+{
+	bool result;
+
+	LWLockAcquire(BdrWorkerCtl->lock, LW_SHARED);
+
+	if (bdr_worker_slot->worker_type != BDR_WORKER_APPLY || bdr_worker_slot->data.apply.perdb == NULL ||
+		bdr_worker_slot->data.apply.perdb->worker_type != BDR_WORKER_PERDB)
+	{
+		LWLockRelease(BdrWorkerCtl->lock);
+		elog(ERROR, "apply worker failed to find associated perdb worker");
+	}
+	result = bdr_worker_slot->data.apply.perdb->data.perdb.ignore_ddl_requests;
+
+	LWLockRelease(BdrWorkerCtl->lock);
+	return result;
 }
 
 /*
@@ -735,17 +728,21 @@ bdr_locks_set_nnodes(int nnodes)
  * Note that we don't usually pq_getmsgend(), instead ignoring any trailing
  * data. Future versions may add extra fields.
  */
-bool
+void
 bdr_locks_process_message(int msg_type, bool transactional, XLogRecPtr lsn,
 						  const BDRNodeId * const origin, StringInfo message)
 {
-	bool handled = true;
-
 	Assert(CurrentMemoryContext == MessageContext);
 
 	if (msg_type == BDR_MESSAGE_START)
 	{
 		bdr_locks_process_remote_startup(origin);
+	}
+	else if (is_ignoring_ddl())
+	{
+		elog(LOG, "ignoring bdr message of type %s from %lu at lsn %X/%X",
+			bdr_message_type_str(msg_type), origin->sysid,
+			(uint32)(lsn>>32), (uint32)lsn);
 	}
 	else if (msg_type == BDR_MESSAGE_ACQUIRE_LOCK)
 	{
@@ -808,13 +805,10 @@ bdr_locks_process_message(int msg_type, bool transactional, XLogRecPtr lsn,
 	}
 	else
 	{
-		elog(LOG, "unknown message type %d", msg_type);
-		handled = false;
+		elog(WARNING, "unknown message type %d", msg_type);
 	}
 
 	Assert(CurrentMemoryContext == MessageContext);
-
-	return handled;
 }
 
 /*

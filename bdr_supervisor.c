@@ -80,7 +80,8 @@ bdr_register_perdb_worker(const char * dbname)
 	NameStr(perdb->dbname)[NAMEDATALEN-1] = '\0';
 	/* Nodecount is set when apply workers are registered */
 	perdb->nnodes = -1;
-	perdb->seq_slot = bdr_sequencer_get_next_free_slot();
+	perdb->ignore_ddl_requests = false;
+	/* perdb->seq_slot = bdr_sequencer_get_next_free_slot(); */
 
 	/*
 	 * The rest of the perdb worker's shmem segment - proclatch

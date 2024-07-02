@@ -892,7 +892,7 @@ bdr_perdb_worker_main(Datum main_arg)
 		 NameStr(perdb->dbname));
 
 	/* initialize sequencer */
-	bdr_sequencer_init(perdb->seq_slot, perdb->nnodes);
+	/* bdr_sequencer_init(perdb->seq_slot, perdb->nnodes); */
 
 	while (!got_SIGTERM)
 	{

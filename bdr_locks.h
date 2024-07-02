@@ -31,7 +31,7 @@ void bdr_process_request_replay_confirm(const BDRNodeId * const node, XLogRecPtr
 void bdr_process_replay_confirm(const BDRNodeId * const node, XLogRecPtr lsn);
 void bdr_locks_process_remote_startup(const BDRNodeId * const node);
 
-extern bool bdr_locks_process_message(int msg_type, bool transactional,
+extern void bdr_locks_process_message(int msg_type, bool transactional,
 									  XLogRecPtr lsn, const BDRNodeId * const origin,
 									  StringInfo message);
 

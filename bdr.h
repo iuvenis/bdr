@@ -259,7 +259,16 @@ typedef struct BdrPerdbWorker
 	 */
 	int			nnodes;
 
-	size_t			seq_slot;
+	/*
+	 * bdr global sequences are currently not supported
+	 */
+	/* size_t			seq_slot; */
+
+	/*
+	 * Set to true during init_replica while we receive changes but are not
+	 * yet expected to participate in ddl locking by the other nodes
+	 */
+	bool			ignore_ddl_requests;
 
 	/*
 	 * The perdb worker's latch from the PROC array, for use from other backends

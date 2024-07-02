@@ -925,6 +925,20 @@ bdr_init_standalone_node(BDRNodeInfo *local_node)
 	CommitTransactionCommand();
 }
 
+static void
+set_ignore_ddl_requests(bool new_value)
+{
+	LWLockAcquire(BdrWorkerCtl->lock, LW_EXCLUSIVE);
+
+	Assert(bdr_worker_slot->worker_type == BDR_WORKER_PERDB);
+	Assert(bdr_worker_slot->data.perdb.ignore_ddl_requests == !new_value);
+
+	elog(LOG, "%signoring ddl lock messages", (new_value ? "" : "no longer "));
+	bdr_worker_slot->data.perdb.ignore_ddl_requests = new_value;
+
+	LWLockRelease(BdrWorkerCtl->lock);
+}
+
 /*
  * Initialize the database, from a remote node if necessary.
  */
@@ -1245,8 +1259,9 @@ bdr_init_replica(BDRNodeInfo *local_node)
 		 * peer is still in 'i' state and won't be counted in DDL locking
 		 * quorum votes. To make sure we don't throw off voting we must
 		 * ensure that we do not reply to DDL locking requests received
-		 * from peers past this point. (TODO XXX FIXME)
+		 * from peers past this point.
 		 */
+		set_ignore_ddl_requests(true);
 		elog(DEBUG1, "inserting our connection into into remote end");
 		bdr_insert_remote_conninfo(nonrepl_init_conn, local_conn_config);
 
@@ -1294,6 +1309,18 @@ bdr_init_replica(BDRNodeInfo *local_node)
 		 * node thanks to the dump and catchup mode operation.
 		 */
 		bdr_wait_for_local_node_ready();
+
+		/*
+		 * Other nodes will expect us to participate in ddl lock acquisition
+		 * once they see us as status 'r', so we start answering once we have
+		 * received the status change. It would be possible in principle
+		 * that another node receives the status change before we do
+		 * and sends a ddl request that we ignore, but then it would
+		 * border on wilful sabotage to spam ddl lock requests during node join.
+		 * Even so that would be nothing that a restart of that node can't fix.
+		 */
+		set_ignore_ddl_requests(false);
+
 		StartTransactionCommand();
 		bdr_node_set_read_only_internal(local_node->name, false, true);
 		CommitTransactionCommand();
