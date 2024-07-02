@@ -1446,42 +1446,11 @@ bdr_commandfilter(PlannedStmt *pstmt,
 	 * ProcessUtility_hook. We don't want to explicitly replicate these since
 	 * running the original statement on the destination will trigger them to
 	 * run there too. So we need nesting protection.
-	 *
-	 * TODO: Capture DDL here, allowing for issues with multi-statements
-	 * (including those that mix DDL and DML, and those with transaction
-	 * control statements).
 	 */
 	if (!affects_only_nonpermanent && !bdr_skip_ddl_replication &&
 		bdr_extension_nestlevel == 0 && !in_bdr_replicate_ddl_command &&
 		bdr_ddl_nestlevel == 0)
 	{
-                if (context != PROCESS_UTILITY_TOPLEVEL)
-                        ereport(ERROR,
-                                        (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-                                         errmsg("DDL command attempted inside function or multi-statement string"),
-                                         errdetail("BDR2 does not support transparent DDL replication for "
-                                                           "multi-statement strings or function bodies containing DDL "
-                                                           "commands. Problem statement has tag [%s] in SQL string: %s",
-                                                           CreateCommandName(parsetree), queryString),
-                                         errhint("Use bdr.bdr_replicate_ddl_command(...) instead")));
-
-		Assert(bdr_ddl_nestlevel >= 0);
-
-		/*
-		 * On 9.4bdr calling next_ProcessUtility_hook will execute the DDL, which
-		 * will fire an event trigger, which in turn calls
-		 * bdr_queue_ddl_commands(...) to queue the command.
-		 *
-		 * On 9.6 we expect users to explicitly use
-		 * bdr.replicate_ddl_command(...) in which case we won't get here.
-		 */
-
-		//if (!affects_only_nonpermanent && PG_VERSION_NUM >= 90600)
-		//	ereport(ERROR,
-		//			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-		//			 errmsg("Direct DDL commands are not supported while BDR is active"),
-		//			 errhint("Use bdr.bdr_replicate_ddl_command(...)")));
-
                 bdr_capture_ddl(parsetree, subQueryString, context,
 			params, dest, CreateCommandName(parsetree));
 
