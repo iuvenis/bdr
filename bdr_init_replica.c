@@ -288,7 +288,11 @@ bdr_init_exec_dump_restore(BDRNodeInfo *node,
 						   " -c bdr.skip_ddl_locking=on"
 						   " -c session_replication_role=replica'");
 
-	tmpdir = palloc(strlen(bdr_temp_dump_directory)+32);
+	/*
+	 * The maximum length of a PID is configurable at least on linux - here we assume
+	 * no more than 16 digits (no more than 7 should be possible on a 64-bit system)
+	 */
+	tmpdir = palloc(strlen(bdr_temp_dump_directory)+strlen(snapshot)+32);
 	sprintf(tmpdir, "%s/postgres-bdr-%s.%d", bdr_temp_dump_directory,
 			snapshot, getpid());
 
