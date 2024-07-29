@@ -2564,6 +2564,7 @@ bdr_apply_work(PGconn* streamConn)
 {
 	int			fd;
 	char	   *copybuf = NULL;
+	time_t			last_contact = 0;
 	XLogRecPtr	last_received = InvalidXLogRecPtr;
 	WaitEventSet *eventSet;
 
@@ -2574,6 +2575,10 @@ bdr_apply_work(PGconn* streamConn)
 										   ALLOCSET_DEFAULT_MINSIZE,
 										   ALLOCSET_DEFAULT_INITSIZE,
 										   ALLOCSET_DEFAULT_MAXSIZE);
+
+	/* we managed to open a connection - counts as first contact */
+	if (bdr_apply_connection_timeout > 0)
+		last_contact = time(NULL);
 
 	eventSet = CreateWaitEventSet(CurrentMemoryContext, 3);
 	AddWaitEventToSet(eventSet, WL_LATCH_SET, PGINVALID_SOCKET, &MyProc->procLatch, NULL);
@@ -2609,6 +2614,17 @@ bdr_apply_work(PGconn* streamConn)
 		{
 			bdr_count_disconnect();
 			elog(ERROR, "connection to other side has died");
+		}
+		else if (bdr_apply_connection_timeout > 0 && last_contact > 0)
+		{
+			size_t now = time(NULL);
+
+			if (now > 0 && now - last_contact > bdr_apply_connection_timeout)
+			{
+				bdr_count_disconnect();
+				elog(ERROR, "apply worker timed out on connection after %lds",
+					now - last_contact);
+			}
 		}
 
 		if (got_SIGHUP)
@@ -2666,6 +2682,10 @@ bdr_apply_work(PGconn* streamConn)
 				StringInfoData s;
 
 				MemoryContextSwitchTo(MessageContext);
+
+				/* reading a new message - counts as contact */
+				if (bdr_apply_connection_timeout > 0)
+				    last_contact = time(NULL);
 
 				initStringInfo(&s);
 				s.data = copybuf;

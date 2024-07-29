@@ -92,6 +92,7 @@ char *bdr_extra_apply_connection_options;
 bool bdr_enabled;
 bool bdr_check_lsn_mismatch;
 bool bdr_check_local_ip;
+int bdr_apply_connection_timeout;
 
 PG_MODULE_MAGIC;
 
@@ -916,6 +917,15 @@ _PG_init(void)
 							   true,
 							   PGC_SIGHUP,
 							   0, NULL, NULL, NULL);
+
+	DefineCustomIntVariable("bdr.apply_connection_timeout",
+							"Cancel apply workers after this many seconds without messages",
+							"Values <=0 disable the connection timeout",
+							&bdr_apply_connection_timeout,
+							5400, -1, INT_MAX,
+							PGC_SIGHUP,
+							GUC_UNIT_S,
+							NULL, NULL, NULL);
 
 	MarkGUCPrefixReserved("bdr");
 

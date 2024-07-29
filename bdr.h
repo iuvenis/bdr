@@ -405,6 +405,7 @@ extern int bdr_trace_ddl_locks_level;
 extern char *bdr_extra_apply_connection_options;
 extern bool bdr_check_lsn_mismatch;
 extern bool bdr_check_local_ip;
+extern int bdr_apply_connection_timeout;
 
 static const char * const bdr_default_apply_connection_options =
         "connect_timeout=30 "
