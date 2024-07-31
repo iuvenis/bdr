@@ -277,8 +277,7 @@ bdr_connect(const char *conninfo,
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_CONNECTION_FAILURE),
-				 errmsg("establish BDR: %s", PQerrorMessage(streamConn)),
-				 errdetail("Connection string is '%s'", conninfo_repl.data)));
+				 errmsg("establish BDR: %s", PQerrorMessage(streamConn))));
 	}
 
 	elog(DEBUG3, "Sending replication command: IDENTIFY_SYSTEM");
