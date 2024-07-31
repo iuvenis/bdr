@@ -24,8 +24,6 @@ BEGIN
     SELECT sysid, timeline, dboid INTO localid
     FROM bdr.bdr_get_local_nodeid();
 
-    RAISE NOTICE USING MESSAGE = format('node identity of node being created is (%s,%s,%s)', localid.sysid, localid.timeline, localid.dboid);
-
     -- If there's already an entry for ourselves in bdr.bdr_connections
     -- then we know this node is part of an active BDR group and cannot
     -- be joined to another group. Unidirectional connections are ignored.
