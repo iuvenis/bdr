@@ -1021,6 +1021,10 @@ bdr_init_replica(BDRNodeInfo *local_node)
 			case BDR_NODE_STATUS_READY:
 				elog(ERROR, "unexpected state");
 
+			case BDR_NODE_STATUS_SYNCING_BDR_TABLES:
+				elog(INFO, "beginning init_replica with bdr table sync");
+				break;
+
 			case BDR_NODE_STATUS_CATCHUP:
 				/*
 				 * We were in catchup mode when we died. We need to resume catchup
@@ -1145,6 +1149,15 @@ bdr_init_replica(BDRNodeInfo *local_node)
 			PQfinish(init_repl_conn);
 			pfree(init_snapshot);
 
+			status = BDR_NODE_STATUS_SYNCING_BDR_TABLES;
+			bdr_nodes_set_local_status(status, BDR_NODE_STATUS_COPYING_INITIAL_DATA);
+			elog(DEBUG1, "dump and apply finished, preparing to sync bdr tables");
+		}
+
+		Assert(status != BDR_NODE_STATUS_BEGINNING_INIT);
+
+		if (status == BDR_NODE_STATUS_SYNCING_BDR_TABLES)
+		{
 			/*
 			 * Copy the state (bdr_nodes and bdr_connections) over from the
 			 * init node to our node.
@@ -1153,11 +1166,11 @@ bdr_init_replica(BDRNodeInfo *local_node)
 			bdr_sync_nodes(nonrepl_init_conn, local_node);
 
 			status = BDR_NODE_STATUS_CATCHUP;
-			bdr_nodes_set_local_status(status, BDR_NODE_STATUS_COPYING_INITIAL_DATA);
-			elog(DEBUG1, "dump and apply finished, preparing for catchup replay");
+			bdr_nodes_set_local_status(status, BDR_NODE_STATUS_SYNCING_BDR_TABLES);
+			elog(DEBUG1, "syncing bdr tables finished, preparing for catchup replay");
 		}
 
-		Assert(status != BDR_NODE_STATUS_BEGINNING_INIT);
+		Assert(status != BDR_NODE_STATUS_SYNCING_BDR_TABLES);
 
 		if (status == BDR_NODE_STATUS_CATCHUP)
 		{
