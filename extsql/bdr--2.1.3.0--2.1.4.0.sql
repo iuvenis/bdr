@@ -336,3 +336,7 @@ BEGIN
     PERFORM bdr.internal_update_seclabel();
 END;
 $body$;
+
+CREATE OR REPLACE FUNCTION bdr.bdr_establish_slot_and_origin(remote_dsn text)
+RETURNS void
+LANGUAGE c as 'MODULE_PATHNAME','bdr_establish_slot_and_origin_sql';

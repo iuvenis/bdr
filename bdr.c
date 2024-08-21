@@ -117,6 +117,7 @@ PGDLLEXPORT Datum bdr_terminate_apply_workers(PG_FUNCTION_ARGS);
 PGDLLEXPORT Datum bdr_skip_changes_upto(PG_FUNCTION_ARGS);
 PGDLLEXPORT Datum bdr_pause_worker_management(PG_FUNCTION_ARGS);
 PGDLLEXPORT Datum bdr_is_active_in_db(PG_FUNCTION_ARGS);
+PGDLLEXPORT Datum bdr_establish_slot_and_origin_sql(PG_FUNCTION_ARGS);
 
 PG_FUNCTION_INFO_V1(bdr_apply_pause);
 PG_FUNCTION_INFO_V1(bdr_apply_resume);
@@ -137,6 +138,7 @@ PG_FUNCTION_INFO_V1(bdr_terminate_apply_workers);
 PG_FUNCTION_INFO_V1(bdr_skip_changes_upto);
 PG_FUNCTION_INFO_V1(bdr_pause_worker_management);
 PG_FUNCTION_INFO_V1(bdr_is_active_in_db);
+PG_FUNCTION_INFO_V1(bdr_establish_slot_and_origin_sql);
 
 static int bdr_get_worker_pid_byid(const BDRNodeId * const nodeid, BdrWorkerType worker_type);
 
@@ -352,10 +354,15 @@ bdr_create_slot(PGconn *streamConn, Name slot_name,
 {
 	StringInfoData query;
 	PGresult   *res;
+	bool	tx_started = false;
 
 	initStringInfo(&query);
 
-	StartTransactionCommand();
+	if (!IsTransactionState())
+	{
+		StartTransactionCommand();
+		tx_started = true;
+	}
 
 	/* we want the new identifier on stable storage immediately */
 	ForceSyncCommit();
@@ -381,9 +388,14 @@ bdr_create_slot(PGconn *streamConn, Name slot_name,
 	/* acquire new local identifier, but don't commit */
 	*replication_identifier = replorigin_create(remote_ident);
 
-	/* now commit local identifier */
-	CommitTransactionCommand();
-	CurrentResourceOwner = bdr_saved_resowner;
+	if (tx_started)
+	{
+		/* now commit local identifier */
+		CommitTransactionCommand();
+		if (bdr_saved_resowner)
+			CurrentResourceOwner = bdr_saved_resowner;
+	}
+
 	elog(DEBUG1, "created replication identifier %u", *replication_identifier);
 
 	if (snapshot)
@@ -1298,6 +1310,20 @@ bdr_skip_changes_upto_cleanup(int code, Datum arg)
 	LWLockAcquire(BdrWorkerCtl->lock, LW_EXCLUSIVE);
 	BdrWorkerCtl->worker_management_paused = false;
 	LWLockRelease(BdrWorkerCtl->lock);
+}
+
+Datum
+bdr_establish_slot_and_origin_sql(PG_FUNCTION_ARGS)
+{
+	const char	*remote_dsn = text_to_cstring(PG_GETARG_TEXT_P(0));
+	BDRNodeId	remote;
+	NameData	slot_name;
+	RepOriginId	origin;
+	PGconn		*conn;
+
+	conn = bdr_establish_connection_and_slot(remote_dsn, "init_sql", &slot_name, &remote, &origin, NULL);
+	PQfinish(conn);
+	PG_RETURN_VOID();
 }
 
 Datum
