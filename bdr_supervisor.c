@@ -443,6 +443,9 @@ bdr_supervisor_worker_main(Datum main_arg)
 			 */
 			bdr_supervisor_rescan_dbs();
 		}
+
+		if (ProcSignalBarrierPending)
+		    ProcessProcSignalBarrier();
 	}
 
 	proc_exit(0);
