@@ -311,6 +311,7 @@ bdr_ensure_node_ready(BdrOutputData *data)
 			break; /* node ready or creating outbound slots */
 		case BDR_NODE_STATUS_NONE:
 		case BDR_NODE_STATUS_BEGINNING_INIT:
+		case BDR_NODE_STATUS_SYNCING_BDR_TABLES:
 			/* This isn't a BDR node yet. */
 			ereport(ERROR,
 					(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
