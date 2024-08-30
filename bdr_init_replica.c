@@ -1022,7 +1022,7 @@ bdr_init_replica(BDRNodeInfo *local_node)
 				elog(ERROR, "unexpected state");
 
 			case BDR_NODE_STATUS_SYNCING_BDR_TABLES:
-				elog(INFO, "beginning init_replica with bdr table sync");
+				elog(LOG, "beginning init_replica with bdr table sync");
 				break;
 
 			case BDR_NODE_STATUS_CATCHUP:
@@ -1083,6 +1083,18 @@ bdr_init_replica(BDRNodeInfo *local_node)
 				break;
 		}
 
+		if (status == BDR_NODE_STATUS_BEGINNING_INIT || status == BDR_NODE_STATUS_SYNCING_BDR_TABLES)
+		{
+			/*
+			 * Force the node to read-only while we initialize. This is
+			 * persistent, so it'll stay read only through restarts and retries
+			 * until we finish init.
+			 */
+			StartTransactionCommand();
+			bdr_node_set_read_only_internal(local_node->name, true, true);
+			CommitTransactionCommand();
+		}
+
 		if (status == BDR_NODE_STATUS_BEGINNING_INIT)
 		{
 			char	   *init_snapshot = NULL;
@@ -1095,15 +1107,6 @@ bdr_init_replica(BDRNodeInfo *local_node)
 
 			status = BDR_NODE_STATUS_COPYING_INITIAL_DATA;
 			bdr_nodes_set_local_status(status, BDR_NODE_STATUS_BEGINNING_INIT);
-
-			/*
-			 * Force the node to read-only while we initialize. This is
-			 * persistent, so it'll stay read only through restarts and retries
-			 * until we finish init.
-			 */
-			StartTransactionCommand();
-			bdr_node_set_read_only_internal(local_node->name, true, true);
-			CommitTransactionCommand();
 
 			/*
 			 * Now establish our slot on the target node, so we can replay
