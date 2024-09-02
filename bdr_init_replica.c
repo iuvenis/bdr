@@ -1015,7 +1015,7 @@ bdr_init_replica(BDRNodeInfo *local_node)
 		switch (status)
 		{
 			case BDR_NODE_STATUS_BEGINNING_INIT:
-				elog(DEBUG2, "initializing from clean state");
+				elog(LOG, "beginning init_replica from clean state");
 				break;
 
 			case BDR_NODE_STATUS_READY:
@@ -1039,7 +1039,7 @@ bdr_init_replica(BDRNodeInfo *local_node)
 				 * currently at, it's guaranteed to be later than the target
 				 * position.
 				 */
-				elog(DEBUG2, "dump applied, need to continue catchup");
+				elog(LOG, "beginning init_replica with catchup");
 				break;
 
 			case BDR_NODE_STATUS_CREATING_OUTBOUND_SLOTS:
@@ -1090,9 +1090,11 @@ bdr_init_replica(BDRNodeInfo *local_node)
 			 * persistent, so it'll stay read only through restarts and retries
 			 * until we finish init.
 			 */
+			elog(LOG, "setting node to read-only mode");
 			StartTransactionCommand();
 			bdr_node_set_read_only_internal(local_node->name, true, true);
 			CommitTransactionCommand();
+			elog(LOG, "node is in read-only mode");
 		}
 
 		if (status == BDR_NODE_STATUS_BEGINNING_INIT)
@@ -1103,7 +1105,7 @@ bdr_init_replica(BDRNodeInfo *local_node)
 			BDRNodeId	remote;
 			RepOriginId	repnodeid;
 
-			elog(INFO, "initializing node");
+			elog(LOG, "preparing logical dump for node initialization");
 
 			status = BDR_NODE_STATUS_COPYING_INITIAL_DATA;
 			bdr_nodes_set_local_status(status, BDR_NODE_STATUS_BEGINNING_INIT);
@@ -1154,7 +1156,7 @@ bdr_init_replica(BDRNodeInfo *local_node)
 
 			status = BDR_NODE_STATUS_SYNCING_BDR_TABLES;
 			bdr_nodes_set_local_status(status, BDR_NODE_STATUS_COPYING_INITIAL_DATA);
-			elog(DEBUG1, "dump and apply finished, preparing to sync bdr tables");
+			elog(LOG, "dump and apply finished, preparing to sync bdr tables");
 		}
 
 		Assert(status != BDR_NODE_STATUS_BEGINNING_INIT);
@@ -1165,12 +1167,12 @@ bdr_init_replica(BDRNodeInfo *local_node)
 			 * Copy the state (bdr_nodes and bdr_connections) over from the
 			 * init node to our node.
 			 */
-			elog(DEBUG1, "syncing bdr_nodes and bdr_connections");
+			elog(LOG, "syncing bdr_nodes and bdr_connections");
 			bdr_sync_nodes(nonrepl_init_conn, local_node);
 
 			status = BDR_NODE_STATUS_CATCHUP;
 			bdr_nodes_set_local_status(status, BDR_NODE_STATUS_SYNCING_BDR_TABLES);
-			elog(DEBUG1, "syncing bdr tables finished, preparing for catchup replay");
+			elog(LOG, "syncing bdr tables finished, preparing for catchup replay");
 		}
 
 		Assert(status != BDR_NODE_STATUS_SYNCING_BDR_TABLES);
@@ -1209,14 +1211,14 @@ bdr_init_replica(BDRNodeInfo *local_node)
 			 * replay confirmations is sufficient. But the only way we have to
 			 * do that right now is a DDL lock.
 			 */
-			elog(DEBUG3, "forcing all peers to flush pending transactions");
+			elog(LOG, "forcing all peers to flush pending transactions");
 			bdr_ddl_lock_remote(nonrepl_init_conn, BDR_LOCK_DDL);
 
 			/*
 			 * Enter catchup mode and wait until we've replayed up to the LSN
 			 * the remote was at when we started catchup.
 			 */
-			elog(DEBUG3, "getting LSN to replay to in catchup mode");
+			elog(LOG, "getting LSN to replay to in catchup mode");
 			min_remote_lsn = bdr_get_remote_lsn(nonrepl_init_conn);
 
 			/*
@@ -1231,13 +1233,13 @@ bdr_init_replica(BDRNodeInfo *local_node)
 			 * replaying to some specific LSN. The full part/join
 			 * protocol should take care of this.
 			 */
-			elog(DEBUG3, "forcing a new transaction on the target node");
+			elog(LOG, "forcing a new transaction on the target node");
 			perform_pointless_transaction(nonrepl_init_conn, local_node);
 
 			bdr_get_remote_nodeinfo_internal(nonrepl_init_conn, &ri);
 
 			/* Launch the catchup worker and wait for it to finish */
-			elog(DEBUG1, "launching catchup mode apply worker");
+			elog(LOG, "launching catchup mode apply worker");
 			bdr_catchup_to_lsn(&ri, min_remote_lsn);
 
 			free_remote_node_info(&ri);
@@ -1248,7 +1250,7 @@ bdr_init_replica(BDRNodeInfo *local_node)
 			 */
 			status = BDR_NODE_STATUS_CREATING_OUTBOUND_SLOTS;
 			bdr_nodes_set_local_status(status, BDR_NODE_STATUS_CATCHUP);
-			elog(DEBUG1, "catchup worker finished, requesting slot creation");
+			elog(LOG, "catchup worker finished, requesting slot creation");
 		}
 
 		/* To reach here we must be waiting for slot creation */
@@ -1278,7 +1280,7 @@ bdr_init_replica(BDRNodeInfo *local_node)
 		 * from peers past this point.
 		 */
 		set_ignore_ddl_requests(true);
-		elog(DEBUG1, "inserting our connection into into remote end");
+		elog(LOG, "inserting our connection into remote end");
 		bdr_insert_remote_conninfo(nonrepl_init_conn, local_conn_config);
 
 		/*
@@ -1288,7 +1290,7 @@ bdr_init_replica(BDRNodeInfo *local_node)
 		 * remote nodes, but they'll be used to write our catchup
 		 * confirmation request WAL message, so we need them to exist.
 		 */
-		elog(DEBUG1, "waiting for all inbound slots to be created");
+		elog(LOG, "waiting for all inbound slots to be created");
 		bdr_init_wait_for_slot_creation();
 
 		/*
@@ -1341,7 +1343,7 @@ bdr_init_replica(BDRNodeInfo *local_node)
 		bdr_node_set_read_only_internal(local_node->name, false, true);
 		CommitTransactionCommand();
 
-		elog(INFO, "finished init_replica, ready to enter normal replication");
+		elog(LOG, "finished init_replica and exited read-only mode, ready to enter normal replication");
 	}
 	PG_END_ENSURE_ERROR_CLEANUP(bdr_cleanup_conn_close,
 							PointerGetDatum(&nonrepl_init_conn));
