@@ -419,7 +419,7 @@ bdr_bgworker_init(uint32 worker_arg, BdrWorkerType worker_type)
 	uint16	worker_idx;
 	char   *dbname;
 
-	Assert(IsBackgroundWorker);
+	Assert(AmBackgroundWorkerProcess());
 
 	MyProcPort = (Port *) calloc(1, sizeof(Port));
 
@@ -639,7 +639,7 @@ bdr_do_not_replicate_check_hook(bool *newvalue, void **extra, GucSource source)
 		return false;
 
 	Assert(IsUnderPostmaster);
-	Assert(!IsBackgroundWorker);
+	Assert(!AmBackgroundWorkerProcess());
 
 	return true;
 }

@@ -339,7 +339,7 @@ void
 bdr_supervisor_worker_main(Datum main_arg)
 {
 	Assert(DatumGetInt32(main_arg) == 0);
-	Assert(IsBackgroundWorker);
+	Assert(AmBackgroundWorkerProcess());
 
 	ResetLatch(&MyProc->procLatch);
 

@@ -692,7 +692,7 @@ bdr_locks_startup(void)
 void
 bdr_locks_set_nnodes(int nnodes)
 {
-	Assert(IsBackgroundWorker);
+	Assert(AmBackgroundWorkerProcess());
 	Assert(bdr_my_locks_database != NULL);
 	Assert(nnodes >= 0);
 
@@ -889,7 +889,7 @@ static void
 bdr_lock_state_xact_callback(XactEvent event, void *arg)
 {
 	Assert(arg == NULL);
-	Assert(IsBackgroundWorker);
+	Assert(AmBackgroundWorkerProcess());
 	Assert(IsBdrApplyWorker()||IsBdrPerdbWorker());
 
 	if (event == XACT_EVENT_COMMIT && bdr_lock_state_xact_callback_info.pending)

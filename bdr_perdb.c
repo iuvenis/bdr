@@ -248,7 +248,7 @@ bdr_maintain_db_workers(void)
 	bdr_make_my_nodeid(&myid);
 
 	/* Should be called from the perdb worker */
-	Assert(IsBackgroundWorker);
+	Assert(AmBackgroundWorkerProcess());
 	Assert(bdr_worker_type == BDR_WORKER_PERDB);
 
 	Assert(!LWLockHeldByMe(BdrWorkerCtl->lock));
