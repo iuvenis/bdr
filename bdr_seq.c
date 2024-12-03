@@ -842,7 +842,6 @@ bdr_sequencer_fill_chunk(Oid seqoid, char *seqschema, char *seqname,
 	int64		lower, upper;
 	bool		success;
 
-	SPI_push();
 	SPI_connect();
 
 	snprintf(local_sysid, sizeof(local_sysid), UINT64_FORMAT,
@@ -910,7 +909,6 @@ bdr_sequencer_fill_chunk(Oid seqoid, char *seqschema, char *seqname,
 		success = true;
 	}
 	SPI_finish();
-	SPI_pop();
 
 	return success;
 }

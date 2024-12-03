@@ -379,8 +379,6 @@ pg_stat_get_bdr(PG_FUNCTION_ARGS)
 	}
 	LWLockRelease(BdrCountCtl->lock);
 
-	tuplestore_donestoring(tupstore);
-
 	return (Datum) 0;
 }
 

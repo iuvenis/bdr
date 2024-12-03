@@ -369,7 +369,6 @@ bdr_nodes_set_local_attrs(BdrNodeStatus status, BdrNodeStatus oldstatus, const i
 					status, myid.sysid, myid.timeline, myid.dboid, spi_ret);
 
 	SPI_finish();
-	SPI_pop_conditional(spi_pushed);
 	PopActiveSnapshot();
 	if (tx_started)
 		CommitTransactionCommand();
