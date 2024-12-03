@@ -115,7 +115,7 @@ bdr_send_message(StringInfo s, bool transactional)
 {
 	XLogRecPtr lsn;
 
-	lsn = LogLogicalMessage(BDR_LOGICAL_MSG_PREFIX, s->data, s->len, transactional);
+	lsn = LogLogicalMessage(BDR_LOGICAL_MSG_PREFIX, s->data, s->len, transactional, false);
 	XLogFlush(lsn);
 
 	elog(DEBUG3, "sending prepared message %p",
