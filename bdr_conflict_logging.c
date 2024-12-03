@@ -101,7 +101,7 @@ void
 bdr_conflict_logging_cleanup(void)
 {
 	if (conflict_log_context)
-		MemoryContextResetAndDeleteChildren(conflict_log_context);
+		MemoryContextReset(conflict_log_context);
 }
 
 

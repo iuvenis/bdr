@@ -2786,7 +2786,7 @@ bdr_apply_work(PGconn* streamConn)
 			}
 		}
 
-		MemoryContextResetAndDeleteChildren(MessageContext);
+		MemoryContextReset(MessageContext);
 	}
 	FreeWaitEventSet(eventSet);
 }
