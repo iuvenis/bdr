@@ -1258,9 +1258,9 @@ cancel_conflicting_transactions(void)
 
 	conflict = GetConflictingVirtualXIDs(InvalidTransactionId, MyDatabaseId);
 
-	while (conflict->backendId != InvalidBackendId)
+	while (conflict->procNumber != INVALID_PROC_NUMBER)
 	{
-		PGPROC	   *pgproc = BackendIdGetProc(conflict->backendId);
+		PGPROC	   *pgproc = ProcNumberGetProc(conflict->procNumber);
 
 		if (pgproc == NULL)
 		{
