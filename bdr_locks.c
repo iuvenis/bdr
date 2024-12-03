@@ -395,7 +395,7 @@ bdr_locks_shmem_init()
 void
 bdr_locks_addwaiter(PGPROC *proc)
 {
-	BDRLockWaiter  *waiter = &bdr_locks_ctl->waiters[proc->pgprocno];
+	BDRLockWaiter  *waiter = &bdr_locks_ctl->waiters[GetNumberFromPGProc(proc)];
 	slist_iter iter;
 
 	waiter->proc = proc;
