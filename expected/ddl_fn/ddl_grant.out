@@ -74,11 +74,11 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 SELECT * from list_privileges;
    Schema   |      Name      |   Type   |   Access privileges    
 ------------+----------------+----------+------------------------
- grant_test | test_tbl       | table    | super=arwdDxt/super   +
+ grant_test | test_tbl       | table    | super=arwdDxtm/super  +
             |                |          | nonsuper=a*r*/super
  grant_test | test_tbl_a_seq | sequence | super=rwU/super       +
             |                |          | nonsuper=wU/super
- grant_test | test_view      | view     | super=arwdDxt/super   +
+ grant_test | test_view      | view     | super=arwdDxtm/super  +
             |                |          | nonsuper=arwdDxt/super
 (3 rows)
 
@@ -86,11 +86,11 @@ SELECT * from list_privileges;
 SELECT * from list_privileges;
    Schema   |      Name      |   Type   |   Access privileges    
 ------------+----------------+----------+------------------------
- grant_test | test_tbl       | table    | super=arwdDxt/super   +
+ grant_test | test_tbl       | table    | super=arwdDxtm/super  +
             |                |          | nonsuper=a*r*/super
  grant_test | test_tbl_a_seq | sequence | super=rwU/super       +
             |                |          | nonsuper=wU/super
- grant_test | test_view      | view     | super=arwdDxt/super   +
+ grant_test | test_view      | view     | super=arwdDxtm/super  +
             |                |          | nonsuper=arwdDxt/super
 (3 rows)
 
@@ -107,22 +107,22 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 (1 row)
 
 SELECT * from list_privileges;
-   Schema   |      Name      |   Type   |  Access privileges  
-------------+----------------+----------+---------------------
- grant_test | test_tbl       | table    | super=arwdDxt/super
- grant_test | test_tbl_a_seq | sequence | super=rwU/super    +
+   Schema   |      Name      |   Type   |  Access privileges   
+------------+----------------+----------+----------------------
+ grant_test | test_tbl       | table    | super=arwdDxtm/super
+ grant_test | test_tbl_a_seq | sequence | super=rwU/super     +
             |                |          | nonsuper=wU/super
- grant_test | test_view      | view     | super=arwdDxt/super
+ grant_test | test_view      | view     | super=arwdDxtm/super
 (3 rows)
 
 \c regression
 SELECT * from list_privileges;
-   Schema   |      Name      |   Type   |  Access privileges  
-------------+----------------+----------+---------------------
- grant_test | test_tbl       | table    | super=arwdDxt/super
- grant_test | test_tbl_a_seq | sequence | super=rwU/super    +
+   Schema   |      Name      |   Type   |  Access privileges   
+------------+----------------+----------+----------------------
+ grant_test | test_tbl       | table    | super=arwdDxtm/super
+ grant_test | test_tbl_a_seq | sequence | super=rwU/super     +
             |                |          | nonsuper=wU/super
- grant_test | test_view      | view     | super=arwdDxt/super
+ grant_test | test_view      | view     | super=arwdDxtm/super
 (3 rows)
 
 SELECT bdr.bdr_replicate_ddl_command($DDL$ GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA grant_test TO nonsuper WITH  GRANT OPTION; $DDL$);
@@ -138,26 +138,26 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 (1 row)
 
 SELECT * from list_privileges;
-   Schema   |      Name      |   Type   |       Access privileges       
-------------+----------------+----------+-------------------------------
- grant_test | test_tbl       | table    | super=arwdDxt/super          +
-            |                |          | nonsuper=a*r*w*d*D*x*t*/super
- grant_test | test_tbl_a_seq | sequence | super=rwU/super              +
+   Schema   |      Name      |   Type   |        Access privileges        
+------------+----------------+----------+---------------------------------
+ grant_test | test_tbl       | table    | super=arwdDxtm/super           +
+            |                |          | nonsuper=a*r*w*d*D*x*t*m*/super
+ grant_test | test_tbl_a_seq | sequence | super=rwU/super                +
             |                |          | nonsuper=wU/super
- grant_test | test_view      | view     | super=arwdDxt/super          +
-            |                |          | nonsuper=a*r*w*d*D*x*t*/super
+ grant_test | test_view      | view     | super=arwdDxtm/super           +
+            |                |          | nonsuper=a*r*w*d*D*x*t*m*/super
 (3 rows)
 
 \c postgres
 SELECT * from list_privileges;
-   Schema   |      Name      |   Type   |       Access privileges       
-------------+----------------+----------+-------------------------------
- grant_test | test_tbl       | table    | super=arwdDxt/super          +
-            |                |          | nonsuper=a*r*w*d*D*x*t*/super
- grant_test | test_tbl_a_seq | sequence | super=rwU/super              +
+   Schema   |      Name      |   Type   |        Access privileges        
+------------+----------------+----------+---------------------------------
+ grant_test | test_tbl       | table    | super=arwdDxtm/super           +
+            |                |          | nonsuper=a*r*w*d*D*x*t*m*/super
+ grant_test | test_tbl_a_seq | sequence | super=rwU/super                +
             |                |          | nonsuper=wU/super
- grant_test | test_view      | view     | super=arwdDxt/super          +
-            |                |          | nonsuper=a*r*w*d*D*x*t*/super
+ grant_test | test_view      | view     | super=arwdDxtm/super           +
+            |                |          | nonsuper=a*r*w*d*D*x*t*m*/super
 (3 rows)
 
 SELECT bdr.bdr_replicate_ddl_command($DDL$ REVOKE TRIGGER, INSERT, UPDATE, DELETE, REFERENCES, TRUNCATE ON grant_test.test_view FROM nonsuper; $DDL$);
@@ -179,24 +179,24 @@ SELECT bdr.wait_slot_confirm_lsn(NULL,NULL);
 (1 row)
 
 SELECT * from list_privileges;
-   Schema   |      Name      |   Type   |       Access privileges       
-------------+----------------+----------+-------------------------------
- grant_test | test_tbl       | table    | super=arwdDxt/super          +
-            |                |          | nonsuper=a*r*w*d*D*x*t*/super
+   Schema   |      Name      |   Type   |        Access privileges        
+------------+----------------+----------+---------------------------------
+ grant_test | test_tbl       | table    | super=arwdDxtm/super           +
+            |                |          | nonsuper=a*r*w*d*D*x*t*m*/super
  grant_test | test_tbl_a_seq | sequence | super=rwU/super
- grant_test | test_view      | view     | super=arwdDxt/super          +
-            |                |          | nonsuper=r*/super
+ grant_test | test_view      | view     | super=arwdDxtm/super           +
+            |                |          | nonsuper=r*m*/super
 (3 rows)
 
 \c regression
 SELECT * from list_privileges;
-   Schema   |      Name      |   Type   |       Access privileges       
-------------+----------------+----------+-------------------------------
- grant_test | test_tbl       | table    | super=arwdDxt/super          +
-            |                |          | nonsuper=a*r*w*d*D*x*t*/super
+   Schema   |      Name      |   Type   |        Access privileges        
+------------+----------------+----------+---------------------------------
+ grant_test | test_tbl       | table    | super=arwdDxtm/super           +
+            |                |          | nonsuper=a*r*w*d*D*x*t*m*/super
  grant_test | test_tbl_a_seq | sequence | super=rwU/super
- grant_test | test_view      | view     | super=arwdDxt/super          +
-            |                |          | nonsuper=r*/super
+ grant_test | test_view      | view     | super=arwdDxtm/super           +
+            |                |          | nonsuper=r*m*/super
 (3 rows)
 
 SELECT bdr.bdr_replicate_ddl_command($DDL$ GRANT EXECUTE ON FUNCTION grant_test.test_func(int) TO nonsuper; $DDL$);
