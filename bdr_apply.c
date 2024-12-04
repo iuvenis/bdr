@@ -2580,7 +2580,7 @@ bdr_apply_work(PGconn* streamConn)
 	if (bdr_apply_connection_timeout > 0)
 		last_contact = time(NULL);
 
-	eventSet = CreateWaitEventSet(CurrentMemoryContext, 3);
+	eventSet = CreateWaitEventSet(CurrentResourceOwner, 3);
 	AddWaitEventToSet(eventSet, WL_LATCH_SET, PGINVALID_SOCKET, &MyProc->procLatch, NULL);
 	AddWaitEventToSet(eventSet, WL_POSTMASTER_DEATH, PGINVALID_SOCKET, NULL, NULL);
 	AddWaitEventToSet(eventSet, WL_SOCKET_READABLE, fd, NULL, NULL);
