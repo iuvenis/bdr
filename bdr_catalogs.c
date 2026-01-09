@@ -589,7 +589,6 @@ bdr_read_connection_configs()
 	{
 		Datum			tmp_datum;
 		bool			isnull;
-		ArrayType	   *conn_replication_sets;
 		char		   *tmp_sysid;
 
 		BdrConnectionConfig *cfg = palloc(sizeof(BdrConnectionConfig));
@@ -643,8 +642,7 @@ bdr_read_connection_configs()
 		 * of identifiers, so we'll want to unpack that.
 		 */
 
-		conn_replication_sets = (ArrayType*)
-			SPI_getbinval(tuple, SPI_tuptable->tupdesc,
+		tmp_datum = SPI_getbinval(tuple, SPI_tuptable->tupdesc,
 						  getattno("conn_replication_sets"), &isnull);
 
 		if (isnull)
@@ -652,7 +650,7 @@ bdr_read_connection_configs()
 		else
 		{
 			cfg->replication_sets =
-				bdr_textarr_to_identliststr(DatumGetArrayTypeP(conn_replication_sets));
+				bdr_textarr_to_identliststr(DatumGetArrayTypeP(tmp_datum));
 		}
 
 		tmp_datum = SPI_getbinval(tuple, SPI_tuptable->tupdesc,
