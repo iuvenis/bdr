@@ -44,6 +44,7 @@
 #include "utils/elog.h"
 #include "utils/fmgroids.h"
 #include "utils/guc.h"
+#include "utils/snapmgr.h"
 
 #define CONNECTION_LIMIT_STR "connection_limit"
 
@@ -264,6 +265,7 @@ bdr_supervisor_createdb()
 	ParseState *pstate;
 
 	StartTransactionCommand();
+	PushActiveSnapshot(GetTransactionSnapshot());
 
 	/* If the DB already exists, no need to create it */
 	dboid = get_database_oid(BDR_SUPERVISOR_DBNAME, true);
@@ -301,6 +303,7 @@ bdr_supervisor_createdb()
 		elog(DEBUG3, "Database "BDR_SUPERVISOR_DBNAME" (oid=%i) already exists, not creating", dboid);
 	}
 
+	PopActiveSnapshot();
 	CommitTransactionCommand();
 
 	Assert(dboid != InvalidOid);

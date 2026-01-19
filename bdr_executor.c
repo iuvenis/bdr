@@ -45,6 +45,7 @@
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
+#include "utils/snapmgr.h"
 #include "utils/syscache.h"
 
 static void BdrExecutorStart(QueryDesc *queryDesc, int eflags);
@@ -306,9 +307,9 @@ bdr_node_set_read_only_internal(char *node_name, bool read_only, bool force)
 	HeapTuple tuple = NULL;
 	Relation rel;
 	RangeVar	   *rv;
-	SnapshotData SnapshotDirty;
 	SysScanDesc scan;
 	ScanKeyData key;
+	Snapshot snapshot;
 	BdrNodeStatus status;
 
 	Assert(IsTransactionState());
@@ -325,7 +326,8 @@ bdr_node_set_read_only_internal(char *node_name, bool read_only, bool force)
 				 errmsg("local node is still starting up, cannot change read-only status.")));
 	}
 
-	InitDirtySnapshot(SnapshotDirty);
+	snapshot = GetTransactionSnapshot();
+	PushActiveSnapshot(snapshot);
 
 	rv = makeRangeVar("bdr", "bdr_nodes", -1);
 	rel = table_openrv(rv, RowExclusiveLock);
@@ -337,7 +339,7 @@ bdr_node_set_read_only_internal(char *node_name, bool read_only, bool force)
 
 	scan = systable_beginscan(rel, InvalidOid,
 							  true,
-							  &SnapshotDirty,
+							  snapshot,
 							  1, &key);
 
 	tuple = systable_getnext(scan);
@@ -361,7 +363,6 @@ bdr_node_set_read_only_internal(char *node_name, bool read_only, bool force)
 
 		newtuple = heap_form_tuple(RelationGetDescr(rel),
 								   values, nulls);
-		//simple_heap_update(rel, &tuple->t_self, newtuple);
 		CatalogTupleUpdate(rel, &tuple->t_self, newtuple);
 	}
 	else
@@ -375,6 +376,7 @@ bdr_node_set_read_only_internal(char *node_name, bool read_only, bool force)
 	table_close(rel, RowExclusiveLock);
 
 	bdr_connections_changed(NULL);
+	PopActiveSnapshot();
 }
 
 /*

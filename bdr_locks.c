@@ -1433,6 +1433,7 @@ bdr_process_acquire_ddl_lock(const BDRNodeId * const node, BDRLockType lock_type
 
 		PG_TRY();
 		{
+			PushActiveSnapshot(GetTransactionSnapshot());
 			tup = heap_form_tuple(RelationGetDescr(rel), values, nulls);
 			//simple_heap_insert(rel, tup);
 			bdr_locks_set_commit_pending_state(BDR_LOCKSTATE_PEER_BEGIN_CATCHUP);
@@ -1440,6 +1441,7 @@ bdr_process_acquire_ddl_lock(const BDRNodeId * const node, BDRLockType lock_type
 			CatalogTupleInsert(rel, tup);
 			ForceSyncCommit(); /* async commit would be too complicated */
 			table_close(rel, NoLock);
+			PopActiveSnapshot();
 			CommitTransactionCommand();
 			(void) MemoryContextSwitchTo(old_ctx);
 		}
