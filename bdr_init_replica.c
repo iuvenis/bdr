@@ -18,6 +18,7 @@
 
 #include <errno.h>
 #include <unistd.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
@@ -59,7 +60,6 @@
 #include "utils/syscache.h"
 #include "pgstat.h"
 
-
 char *bdr_temp_dump_directory = NULL;
 
 static void bdr_init_exec_dump_restore(BDRNodeInfo *node,
@@ -85,6 +85,80 @@ bdr_get_remote_lsn(PGconn *conn)
 					  CStringGetDatum(PQgetvalue(res, 0, 0))));
 	PQclear(res);
 	return lsn;
+}
+
+/*
+ * Returns unix time in milliseconds.
+ * We don't use GetCurrentTimestamp in order to avoid
+ * converting back and forth between unix time and
+ * postgresql time. This probably compromises Windows
+ * compatibility, but we are not currently interested in
+ * supporting that with BDR.
+ */
+static long
+bdr_get_local_epoch_millis()
+{
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	return tv.tv_sec * 1000L + tv.tv_usec / 1000L;
+}
+
+static long
+bdr_get_remote_epoch_millis(PGconn *conn)
+{
+	long timestamp;
+	PGresult   *res;
+	char *resp, *endp;
+
+	res = PQexec(conn, "SELECT (EXTRACT(EPOCH FROM now()) * 1000)::bigint");
+	if (PQresultStatus(res) != PGRES_TUPLES_OK)
+	{
+		elog(ERROR, "Unable to get remote timestamp: status %s: %s\n",
+			 PQresStatus(PQresultStatus(res)), PQresultErrorMessage(res));
+	}
+	if (PQntuples(res) != 1)
+	{
+		elog(ERROR, "Remote timestamp query returned %d results instead of 1\n",
+			PQntuples(res));
+	}
+	if (PQgetisnull(res, 0, 0) || !(resp = PQgetvalue(res, 0, 0)) || *resp == '\0')
+	{
+		elog(ERROR, "Remote timestamp query returned %s value\n",
+			PQgetisnull(res, 0, 0) || !resp ? "null" : "null byte");
+	}
+	timestamp = strtol(resp, &endp, 10);
+	if (timestamp == 0 && *endp != '\0')
+	{
+		elog(ERROR, "Unable to convert remote timestamp %s to long\n", resp);
+	}
+	PQclear(res);
+	return timestamp;
+}
+
+static void
+bdr_wait_for_remote_time(PGconn *remote_conn, long target_epoch)
+{
+	int rc;
+	long remote_epoch;
+	/*
+	 * Note that CurrentResourceOwner is probably unset in this setup phase,
+	 * so we clean event_set up manually once we are done waiting.
+	 */
+	WaitEventSet *event_set = CreateWaitEventSet(NULL, 2);
+
+	AddWaitEventToSet(event_set, WL_LATCH_SET, PGINVALID_SOCKET, &MyProc->procLatch, NULL);
+	AddWaitEventToSet(event_set, WL_POSTMASTER_DEATH, PGINVALID_SOCKET, NULL, NULL);
+	while ((remote_epoch = bdr_get_remote_epoch_millis(remote_conn)) < target_epoch)
+	{
+		WaitEvent event;
+		long waitfor = target_epoch - remote_epoch + 100;
+		elog(WARNING, "Waiting %ldms for remote timestamp %ld to reach target %ld\n", waitfor, remote_epoch, target_epoch);
+		rc = WaitEventSetWait(event_set, waitfor, &event, 1, PG_WAIT_EXTENSION);
+		ResetLatch(&MyProc->procLatch);
+		/* Emergency bailout on postmaster shutdown. */
+		if (rc && event.events & WL_POSTMASTER_DEATH) proc_exit(1);
+	}
+	FreeWaitEventSet(event_set);
 }
 
 static void
@@ -408,61 +482,72 @@ bdr_init_exec_dump_restore(BDRNodeInfo *node,
 }
 
 /*
- * BDR state synchronization.
+ * Starts a transaction on each of the given connections,
+ * locking bdr_nodes and bdr_connections exclusively and
+ * configuring search_path to ignore the public schema
+ * in the scope of that transaction. We need to permit
+ * unsafe ddl commands in order to be able to write to
+ * read-only nodes.
  */
 static void
-bdr_sync_nodes(PGconn *remote_conn, BDRNodeInfo *local_node)
+bdr_setup_copy_node_environment(PGconn *remote_conn, PGconn *local_conn)
 {
-	PGconn *local_conn;
+	PGresult   *res;
+	const char *const setup_query =
+		"BEGIN TRANSACTION ISOLATION LEVEL READ COMMITTED;\n"
+		"SET LOCAL search_path = bdr, pg_catalog;\n"
+		"SET LOCAL bdr.permit_unsafe_ddl_commands = on;\n"
+		"SET LOCAL bdr.skip_ddl_replication = on;\n"
+		"SET LOCAL bdr.skip_ddl_locking = on;\n"
+		"LOCK TABLE bdr.bdr_nodes IN EXCLUSIVE MODE;\n"
+		"LOCK TABLE bdr.bdr_connections IN EXCLUSIVE MODE;\n";
 
-	local_conn = bdr_connect_nonrepl(local_node->local_dsn, "init");
+	res = PQexec(remote_conn, setup_query);
+	if (PQresultStatus(res) != PGRES_COMMAND_OK)
+		elog(ERROR, "BEGIN or table locking on remote failed: %s",
+				PQresultErrorMessage(res));
+	PQclear(res);
+
+	res = PQexec(local_conn, setup_query);
+	if (PQresultStatus(res) != PGRES_COMMAND_OK)
+		elog(ERROR, "BEGIN or table locking on local node failed: %s",
+				PQresultErrorMessage(res));
+	PQclear(res);
+}
+
+static void
+bdr_commit_both(PGconn *remote_conn, PGconn *local_conn)
+{
+	PGresult *res = PQexec(remote_conn, "COMMIT");
+	if (PQresultStatus(res) != PGRES_COMMAND_OK)
+		elog(ERROR, "COMMIT on remote failed: %s",
+				PQresultErrorMessage(res));
+	PQclear(res);
+
+	res = PQexec(local_conn, "COMMIT");
+	if (PQresultStatus(res) != PGRES_COMMAND_OK)
+		elog(ERROR, "COMMIT on local node failed: %s",
+				PQresultErrorMessage(res));
+	PQclear(res);
+}
+
+/*
+ * Copy bdr_nodes and bdr_connections entries from remote node to local node.
+ */
+static void
+bdr_copy_nodes_from(PGconn *remote_conn, BDRNodeInfo *local_node)
+{
+	PGconn *local_conn = bdr_connect_nonrepl(local_node->local_dsn, "init");
 
 	PG_ENSURE_ERROR_CLEANUP(bdr_cleanup_conn_close,
 							PointerGetDatum(&local_conn));
 	{
-		StringInfoData query;
-		PGresult   *res;
-		char		sysid_str[33];
-		const char *const setup_query =
-			"BEGIN TRANSACTION ISOLATION LEVEL READ COMMITTED;\n"
-			"SET LOCAL search_path = bdr, pg_catalog;\n"
-			"SET LOCAL bdr.permit_unsafe_ddl_commands = on;\n"
-			"SET LOCAL bdr.skip_ddl_replication = on;\n"
-			"SET LOCAL bdr.skip_ddl_locking = on;\n"
-			"LOCK TABLE bdr.bdr_nodes IN EXCLUSIVE MODE;\n"
-			"LOCK TABLE bdr.bdr_connections IN EXCLUSIVE MODE;\n";
-
-		/* Setup the environment. */
-		res = PQexec(remote_conn, setup_query);
-		if (PQresultStatus(res) != PGRES_COMMAND_OK)
-			elog(ERROR, "BEGIN or table locking on remote failed: %s",
-					PQresultErrorMessage(res));
-		PQclear(res);
-
-		res = PQexec(local_conn, setup_query);
-		if (PQresultStatus(res) != PGRES_COMMAND_OK)
-			elog(ERROR, "BEGIN or table locking on local failed: %s",
-					PQresultErrorMessage(res));
-		PQclear(res);
+		bdr_setup_copy_node_environment(remote_conn, local_conn);
 
 		/* Copy remote bdr_nodes entries to the local node. */
 		bdr_copytable(remote_conn, local_conn,
-					  "COPY (SELECT * FROM bdr.bdr_nodes) TO stdout",
-					  "COPY bdr.bdr_nodes FROM stdin");
-
-		/* Copy the local entry to remote node. */
-		initStringInfo(&query);
-		/* No need to quote as everything is numbers. */
-		snprintf(sysid_str, sizeof(sysid_str), UINT64_FORMAT, local_node->id.sysid);
-		sysid_str[sizeof(sysid_str)-1] = '\0';
-		appendStringInfo(&query,
-						 "COPY (SELECT * FROM bdr.bdr_nodes WHERE "
-							"node_sysid = '%s' AND node_timeline = '%u' "
-							"AND node_dboid = '%u') TO stdout",
-						 sysid_str, local_node->id.timeline, local_node->id.dboid);
-
-		bdr_copytable(local_conn, remote_conn,
-					  query.data, "COPY bdr.bdr_nodes FROM stdin");
+			"COPY (SELECT * FROM bdr.bdr_nodes) TO stdout",
+			"COPY bdr.bdr_nodes FROM stdin");
 
 		/*
 		 * Copy remote connections to the local node.
@@ -471,21 +556,47 @@ bdr_sync_nodes(PGconn *remote_conn, BDRNodeInfo *local_node)
 		 * because it triggers the connect-back process on the remote node(s).
 		 */
 		bdr_copytable(remote_conn, local_conn,
-					  "COPY (SELECT * FROM bdr.bdr_connections) TO stdout",
-					  "COPY bdr.bdr_connections FROM stdin");
+			"COPY (SELECT * FROM bdr.bdr_connections) TO stdout",
+			"COPY bdr.bdr_connections FROM stdin");
 
-		/* Save changes. */
-		res = PQexec(remote_conn, "COMMIT");
-		if (PQresultStatus(res) != PGRES_COMMAND_OK)
-			elog(ERROR, "COMMIT on remote failed: %s",
-					PQresultErrorMessage(res));
-		PQclear(res);
+		bdr_commit_both(remote_conn, local_conn);
+	}
+	PG_END_ENSURE_ERROR_CLEANUP(bdr_cleanup_conn_close,
+								PointerGetDatum(&local_conn));
+	PQfinish(local_conn);
+}
 
-		res = PQexec(local_conn, "COMMIT");
-		if (PQresultStatus(res) != PGRES_COMMAND_OK)
-			elog(ERROR, "COMMIT on remote failed: %s",
-					PQresultErrorMessage(res));
-		PQclear(res);
+/*
+ * Copy bdr_nodes entry for local_node to remote.
+ */
+static void
+bdr_copy_node_to(PGconn *remote_conn, BDRNodeInfo *local_node)
+{
+	PGconn *local_conn = bdr_connect_nonrepl(local_node->local_dsn, "init");
+
+	PG_ENSURE_ERROR_CLEANUP(bdr_cleanup_conn_close,
+							PointerGetDatum(&local_conn));
+	{
+		char sysid_str[33];
+		StringInfoData query;
+
+		bdr_setup_copy_node_environment(remote_conn, local_conn);
+
+		initStringInfo(&query);
+		/* No need to quote as everything is numbers. */
+		snprintf(sysid_str, sizeof(sysid_str), UINT64_FORMAT, local_node->id.sysid);
+		sysid_str[sizeof(sysid_str)-1] = '\0';
+		appendStringInfo(&query,
+			"COPY (SELECT * FROM bdr.bdr_nodes WHERE "
+				"node_sysid = '%s' AND node_timeline = '%u' "
+				"AND node_dboid = '%u') TO stdout",
+			sysid_str, local_node->id.timeline, local_node->id.dboid);
+
+		/* Copy the local entry to remote node. */
+		bdr_copytable(local_conn, remote_conn,
+			query.data, "COPY bdr.bdr_nodes FROM stdin");
+
+		bdr_commit_both(remote_conn, local_conn);
 	}
 	PG_END_ENSURE_ERROR_CLEANUP(bdr_cleanup_conn_close,
 								PointerGetDatum(&local_conn));
@@ -1167,12 +1278,12 @@ bdr_init_replica(BDRNodeInfo *local_node)
 			 * Copy the state (bdr_nodes and bdr_connections) over from the
 			 * init node to our node.
 			 */
-			elog(LOG, "syncing bdr_nodes and bdr_connections");
-			bdr_sync_nodes(nonrepl_init_conn, local_node);
+			elog(LOG, "copying bdr_nodes and bdr_connections from init node");
+			bdr_copy_nodes_from(nonrepl_init_conn, local_node);
 
 			status = BDR_NODE_STATUS_CATCHUP;
 			bdr_nodes_set_local_status(status, BDR_NODE_STATUS_SYNCING_BDR_TABLES);
-			elog(LOG, "syncing bdr tables finished, preparing for catchup replay");
+			elog(LOG, "finished copying bdr tables, preparing for catchup replay");
 		}
 
 		Assert(status != BDR_NODE_STATUS_SYNCING_BDR_TABLES);
@@ -1252,9 +1363,17 @@ bdr_init_replica(BDRNodeInfo *local_node)
 			bdr_nodes_set_local_status(status, BDR_NODE_STATUS_CATCHUP);
 			elog(LOG, "catchup worker finished, requesting slot creation");
 		}
-
 		/* To reach here we must be waiting for slot creation */
 		Assert(status == BDR_NODE_STATUS_CREATING_OUTBOUND_SLOTS);
+
+		/*
+		 * Remember the local time when we entered this init replica phase.
+		 * If this is our first run through bdr_init_replica, we probably
+		 * just updated the local status in bdr_nodes. Unless system time
+		 * misbehaves severely, the timestamp associated with that last
+		 * change should be <= the timestamp we are about to generate.
+		 */
+		long local_epoch_ms = bdr_get_local_epoch_millis();
 
 		/*
 		 * It is now safe to start apply workers, as we've finished catchup.
@@ -1268,13 +1387,25 @@ bdr_init_replica(BDRNodeInfo *local_node)
 		bdr_maintain_db_workers();
 
 		/*
+		 * In order to ensure that the coming status updates for our node
+		 * executed via client connection on the node we are joining are
+		 * not discarded locally in conflict resolution, we need to check that
+		 * system time on the other node is > local_epoch_ms before we insert
+		 * bdr_nodes and execute the coming status updates on the remote node.
+		 */
+		bdr_wait_for_remote_time(nonrepl_init_conn, local_epoch_ms);
+		elog(LOG, "copying new bdr_nodes entry to remote node");
+		bdr_copy_node_to(nonrepl_init_conn, local_node);
+		elog(LOG, "finished copying bdr_nodes entry");
+
+		/*
 		 * Insert our connection info on the remote end. This will prompt
 		 * the other end to connect back to us and make a slot, and will
 		 * cause the other nodes to do the same when the new nodes and
 		 * connections rows are replicated to them.
 		 *
 		 * We're still staying out of DDL locking. Our bdr_nodes entry on the
-		 * peer is still in 'i' state and won't be counted in DDL locking
+		 * peer is in 'o' state and won't be counted in DDL locking
 		 * quorum votes. To make sure we don't throw off voting we must
 		 * ensure that we do not reply to DDL locking requests received
 		 * from peers past this point.
