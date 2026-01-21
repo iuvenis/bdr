@@ -1,11 +1,19 @@
-A port of BDR2 to PG17. Tested with version 17.2. Based on keenser's port of BDR2 to PG11.
+A port of BDR2 to modern postgres versions.
+Based on keenser's port of BDR2 to PG11.
 
 See INSTALL.src for compilation instructions.
 
-In porting to later postgres versions I did not invest any effort in maintaining compatibility with earlier versions. Stable commits known to work with previous postgres versions are tagged as such before knowingly breaking compatibility. Search for tags such as postgres16.4.
+In porting to later postgres versions I did not invest any effort in maintaining compatibility with earlier postgres versions or Windows builds.
+Version tags such PG17.7-BDR2.1.5 indicate stable versions and the postgres version they are intended to be compiled against.
+Note that even deviations in the postgres minor version may very well cause compilation failures.
+Furthermore, when compiling BDR against a different postgres version you should update the sources for the bdr_dump binary in the pg_dump subdirectory.
+These consist of all source files with endings .c, .h, .po, or .pl under src/bin/pg_dump and subdirectories from the postgres sources, and src/fe_utils/string_utils.c.
+After copying these files to pg_dump apply the changes required for bdr_dump to maintain column order in its logical backups by running "git apply pg_backup.h.patch pg_dump.c.patch".
 
 Any comments or even pull requests with bug fixes or improvements are more than welcome.
 
 Limitations:
 
-- BDR functionality revolving around custom conflict handlers is currently not ported and deactivated via a precompiler flag. Personally, I had no need for custom conflict handlers. I believe keenser has ported curstom conflict handlers in the repo I forked off from, so maybe check that out if you need them
+- BDR functionality revolving around custom conflict handlers is not ported and deactivated via a precompiler flag.
+  Personally, I had no need for custom conflict handlers.
+  I believe keenser has ported curstom conflict handlers in the repo I forked off from, so maybe check that out if you need them.
