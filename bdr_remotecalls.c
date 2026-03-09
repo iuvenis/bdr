@@ -296,7 +296,6 @@ bdr_get_remote_nodeinfo_internal(PGconn *conn, struct remote_node_info *ri)
 	ri->is_superuser = DatumGetBool(
 			DirectFunctionCall1(boolin, CStringGetDatum(PQgetvalue(res, 0, 1))));
 
-	PQclear(res);
 
 	/*
 	 * Even though we should be able to get it from bdr_version_num, always
@@ -306,6 +305,7 @@ bdr_get_remote_nodeinfo_internal(PGconn *conn, struct remote_node_info *ri)
 	 */
 	parsed_version_num = bdr_parse_version(remote_bdr_version_str, NULL, NULL,
 										   NULL, NULL);
+	PQclear(res);
 
 	ri->version_num = parsed_version_num;
 
